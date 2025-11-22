@@ -1,0 +1,43 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Virtual Environment ---
+venv/
+.env
+.env.*
+
+# --- OS Files ---
+.DS_Store
+Thumbs.db
+serviceAccount.json
+
+# --- Logs & Caches ---
+*.log
+*.sqlite3
+.cache/
+coverage/
+.pytest_cache/
+.mypy_cache/
+*.pid
+
+# --- IDE/Editor Configs ---
+.vscode/
+.idea/
+*.swp
+
+# --- FastAPI Specific ---
+# Uvicorn reload cache or debug artifacts (if any)
+*.db
+*.sqlite
+
+# --- Optional ---
+# If you ever use Docker or build artifacts later:
+build/
+dist/
+*.egg-info/
+
+# --- Firebase or Service Accounts ---
+firebase-adminsdk*.json
+serviceAccountKey.json
