@@ -1,59 +1,35 @@
-# models/user_model.py
-
-import uuid
-from datetime import datetime
-from uuid import UUID as UUID_TYPE
-
-from sqlalchemy import Column, String, Boolean, DateTime
+from sqlalchemy import Column, Text, Boolean, Integer, TIMESTAMP, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-
-from pydantic import BaseModel, EmailStr
-
 from core.database import Base
 
-
-# =========================
-# SQLALCHEMY MODEL (DB)
-# =========================
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email = Column(String, unique=True, index=True, nullable=False)
-    password_hash = Column(String(128), nullable=False)
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()")  # DB generates UUID
+    )
 
-    role = Column(String, nullable=False, default="owner")
-    # owner | manager | staff | admin
+    business_name = Column(Text, nullable=False)
+    business_type = Column(Text, nullable=False, server_default="general")
+    name = Column(Text, nullable=False)
+    email = Column(Text, unique=True, nullable=False)
+    password_hash = Column(Text, nullable=False)
+    contact_number = Column(Text)
+    avatar = Column(Text)
+    notifications_enabled = Column(Boolean, server_default=text("true"))
 
-    is_active = Column(Boolean, default=True)
-    is_verified = Column(Boolean, default=False)
+    subscription_start_date = Column(TIMESTAMP)
+    subscription_end_date = Column(TIMESTAMP)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-
-# =========================
-# PYDANTIC SCHEMAS (API)
-# =========================
-
-class UserCreate(BaseModel):
-    email: EmailStr
-    password: str
-
-
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
+    total_products = Column(Integer, default=0, server_default="0")
+    out_of_stock_count = Column(Integer, default=0, server_default="0")
+    low_stock_count = Column(Integer, default=0, server_default="0")
 
 
-class UserResponse(BaseModel):
-    id: UUID_TYPE
-    email: EmailStr
-    role: str
-    is_active: bool
-    is_verified: bool
-    created_at: datetime
-
-    class Config:
-        from_attributes = True  # REQUIRED for SQLAlchemy (Pydantic v2)
+    last_active_at = Column(TIMESTAMP)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    deleted_at = Column(TIMESTAMP)

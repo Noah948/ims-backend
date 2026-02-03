@@ -1,5 +1,3 @@
-# core/dependencies.py
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -16,15 +14,24 @@ def get_current_user(
     db: Session = Depends(get_db),
 ):
     payload = decode_access_token(token)
-    if not payload:
+
+    if not payload or "sub" not in payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
         )
 
-    user = db.query(User).filter(User.id == payload["sub"]).first()
-    if not user or not user.is_active:
-        raise HTTPException(status_code=401, detail="User not found or inactive")
+    # Fetch user from DB; only check deleted_at
+    user = db.query(User).filter(
+        User.id == payload["sub"],
+        User.deleted_at.is_(None)
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
 
     return user
 
@@ -32,6 +39,9 @@ def get_current_user(
 def require_role(required_role: str):
     def checker(user: User = Depends(get_current_user)):
         if user.role != required_role:
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
+            )
         return user
     return checker

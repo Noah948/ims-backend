@@ -1,15 +1,19 @@
-# services/auth_service.py
 
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+from datetime import datetime
 
 from models.user_model import User
-from utils.password import hash_password, verify_password
-from utils.jwt import create_access_token
+from schema.user import UserCreate
+from utils.password import hash_password
 
 
-def register_user(db: Session, email: str, password: str):
-    existing_user = db.query(User).filter(User.email == email).first()
+def register_user(db: Session, data: UserCreate) -> User:
+    """
+    Register a new user.
+    """
+
+    existing_user = db.query(User).filter(User.email == data.email).first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -17,27 +21,18 @@ def register_user(db: Session, email: str, password: str):
         )
 
     user = User(
-        email=email,
-        password_hash=hash_password(password),
-        role="owner",
+        name=data.name,
+        business_name=data.business_name,
+        business_type=data.business_type,
+        email=data.email,
+        password_hash=hash_password(data.password),
+        contact_number=data.contact_number,
+        notifications_enabled=True,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
     )
 
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
-
-
-def authenticate_user(db: Session, email: str, password: str):
-    user = db.query(User).filter(User.email == email).first()
-    if not user or not verify_password(password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-        )
-
-    token = create_access_token(
-        data={"sub": str(user.id), "role": user.role}
-    )
-
-    return {"access_token": token, "token_type": "bearer"}
