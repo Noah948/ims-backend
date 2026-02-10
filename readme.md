@@ -1,12 +1,6 @@
 # TODO
-- use modal and schema of user to create basic service and route
-- then give all auth related code and tell to generate middleware
-- use this middleware for user. check that different usser are unable to login with same credentials
-
----
-
-- now we have to make every model and integerate it into user model
-- our task is to make a new user. for this we need to see all tables in supabase and for that we need to setup alembic.
+- business type should just take retail or wholesale
+- in sales contact must have 10 integers
 
 Here’s the correct progression for your project:
 

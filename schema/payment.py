@@ -1,16 +1,18 @@
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
+from typing import Optional
 
-class PaymentCreate(BaseModel):
-    transaction_id: str
-    payment_date: datetime
+class SubscriptionCreateResponse(BaseModel):
+    subscription_id: str
+    short_url: str
+
 
 class PaymentResponse(BaseModel):
     id: UUID
-    transaction_id: str
-    payment_date: datetime
-    created_at: datetime
+    subscription_id: str
+    status: str
+    current_period_end: Optional[datetime]
 
     class Config:
         from_attributes = True
