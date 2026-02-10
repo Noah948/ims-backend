@@ -36,14 +36,14 @@ def create_product(db: Session, user_id, data: ProductCreate):
     user = db.query(User).filter(User.id == user_id).first()
 
     # total inventory quantity
-    user.total_products += data.stock
+    user.total_products += data.stock  # type: ignore
 
     # stock state handling
     state = stock_state(data.stock, data.minimum_stock)
     if state == "low":
-        user.low_stock_count += 1
+        user.low_stock_count += 1  # type: ignore
     elif state == "out":
-        user.out_of_stock_count += 1
+        user.out_of_stock_count += 1  # type: ignore
 
     db.add(product)
     db.commit()
@@ -91,7 +91,8 @@ def update_product(db: Session, user_id, product_id, data: ProductUpdate):
     # old values
     old_stock = product.stock
     old_min = product.minimum_stock
-    old_state = stock_state(old_stock, old_min)
+    old_state = stock_state(old_stock, old_min)  # type: ignore
+
 
     # apply updates
     for key, value in data.dict(exclude_unset=True).items():
@@ -100,22 +101,23 @@ def update_product(db: Session, user_id, product_id, data: ProductUpdate):
     # new values
     new_stock = product.stock
     new_min = product.minimum_stock
-    new_state = stock_state(new_stock, new_min)
+    new_state = stock_state(new_stock, new_min)  # type: ignore
 
     # update total quantity
-    user.total_products += (new_stock - old_stock)
+    user.total_products += (new_stock - old_stock)  # type: ignore
+
 
     # handle state transition
     if old_state != new_state:
         if old_state == "low":
-            user.low_stock_count -= 1
+            user.low_stock_count -= 1  # type: ignore
         elif old_state == "out":
-            user.out_of_stock_count -= 1
+            user.out_of_stock_count -= 1  # type: ignore
 
         if new_state == "low":
-            user.low_stock_count += 1
+            user.low_stock_count += 1  # type: ignore
         elif new_state == "out":
-            user.out_of_stock_count += 1
+            user.out_of_stock_count += 1  # type: ignore
 
     db.commit()
     db.refresh(product)
@@ -129,14 +131,15 @@ def delete_product(db: Session, user_id, product_id):
     user = db.query(User).filter(User.id == user_id).first()
 
     # subtract quantity
-    user.total_products -= product.stock
+    user.total_products -= product.stock  # type: ignore
+
 
     # remove stock state
-    state = stock_state(product.stock, product.minimum_stock)
+    state = stock_state(product.stock, product.minimum_stock)  # type: ignore 
     if state == "low":
-        user.low_stock_count -= 1
+        user.low_stock_count -= 1  # type: ignore
     elif state == "out":
-        user.out_of_stock -= 1
+        user.out_of_stock -= 1 # type: ignore
 
     db.delete(product)
     db.commit()

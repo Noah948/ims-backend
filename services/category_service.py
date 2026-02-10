@@ -37,8 +37,8 @@ def update_category(db: Session, user_id: str, category_id: str, data: CategoryU
     category = get_category(db, user_id, category_id)
     if not category:
         return None
-    category.name = data.name
-    category.updated_at = datetime.utcnow()
+    category.name = data.name  # type: ignore
+    category.updated_at = datetime.utcnow()  # type: ignore
     db.commit()
     db.refresh(category)
     return category

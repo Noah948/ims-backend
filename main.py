@@ -4,11 +4,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.database import Base, engine
 from core.config import settings
 
-# from routes.user_routes import router as user_router
 from routes.auth_routes import router as auth_router
 from routes.category_routes import router as category_router
 from routes.category_field_routes import router as category_field_router
 from routes.product_routes import router as product_router  
+from routes.job_routes import router as job_router  
+from routes.team_routes import router as team_router  
+from routes.sale_routes import router as sale_router  
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -31,11 +33,13 @@ app.add_middleware(
 )
 
 # ✅ Routers
-app.include_router(auth_router)
 app.include_router(category_router)
 app.include_router(category_field_router)
 app.include_router(product_router)
-# app.include_router(user_router)
+app.include_router(sale_router)
+app.include_router(job_router)
+app.include_router(team_router)
+app.include_router(auth_router)
 
 
 @app.get("/", tags=["Health"])
