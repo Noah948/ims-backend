@@ -5,12 +5,11 @@ from models.product import Product
 from models.category import Category
 from models.user_model import User
 from schema.product import ProductCreate, ProductUpdate
+from utils.inventory import apply_stock_change
 from utils.stock import stock_state
 
 
-
-# CREATE
-
+# ---------------- CREATE ----------------
 def create_product(db: Session, user_id, data: ProductCreate):
     category = db.query(Category).filter(
         Category.id == data.category_id,
@@ -18,60 +17,48 @@ def create_product(db: Session, user_id, data: ProductCreate):
     ).first()
 
     if not category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found"
-        )
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    user = db.query(User).filter(User.id == user_id).first()
 
     product = Product(
         user_id=user_id,
         category_id=data.category_id,
         name=data.name,
         price=data.price,
-        stock=data.stock,
+        stock=0,
         minimum_stock=data.minimum_stock,
         dynamic_fields=data.dynamic_fields,
     )
 
-    user = db.query(User).filter(User.id == user_id).first()
-
-    # total inventory quantity
-    user.total_products += data.stock  # type: ignore
-
-    # stock state handling
-    state = stock_state(data.stock, data.minimum_stock)
-    if state == "low":
-        user.low_stock_count += 1  # type: ignore
-    elif state == "out":
-        user.out_of_stock_count += 1  # type: ignore
-
     db.add(product)
+    db.flush()
+
+    # 🔥 Register product properly through inventory layer
+    apply_stock_change(
+        user=user,
+        product=product,
+        quantity_delta=data.stock or 0,
+        is_new=True,
+    )
+
     db.commit()
     db.refresh(product)
     return product
 
 
-# GET ALL
 
+# ---------------- GET ALL ----------------
 def get_products(db: Session, user_id):
-    return (
-        db.query(Product)
-        .filter(Product.user_id == user_id)
-        .all()
-    )
+    return db.query(Product).filter(Product.user_id == user_id).all()
 
 
-# GET ONE
-
+# ---------------- GET ONE ----------------
 def get_product(db: Session, user_id, product_id):
-    product = (
-        db.query(Product)
-        .filter(
-            Product.id == product_id,
-            Product.user_id == user_id
-        )
-        .first()
-    )
+    product = db.query(Product).filter(
+        Product.id == product_id,
+        Product.user_id == user_id
+    ).first()
 
     if not product:
         raise HTTPException(
@@ -82,64 +69,98 @@ def get_product(db: Session, user_id, product_id):
     return product
 
 
-# UPDATE
-
+# ---------------- UPDATE ----------------
 def update_product(db: Session, user_id, product_id, data: ProductUpdate):
     product = get_product(db, user_id, product_id)
     user = db.query(User).filter(User.id == user_id).first()
 
-    # old values
-    old_stock = product.stock
-    old_min = product.minimum_stock
-    old_state = stock_state(old_stock, old_min)  # type: ignore
+    update_data = data.dict(exclude_unset=True)
 
+    quantity_delta = 0
+    new_minimum_stock = None
 
-    # apply updates
-    for key, value in data.dict(exclude_unset=True).items():
+    # Extract stock change
+    if "stock" in update_data:
+        new_stock = update_data.pop("stock")
+        quantity_delta = new_stock - product.stock
+
+    # Extract minimum_stock change
+    if "minimum_stock" in update_data:
+        new_minimum_stock = update_data.pop("minimum_stock")
+
+    # 🔥 Let inventory engine handle stock + state logic
+    if quantity_delta != 0 or new_minimum_stock is not None:
+        apply_stock_change(
+            user=user,
+            product=product,
+            quantity_delta=quantity_delta,
+            new_minimum_stock=new_minimum_stock,
+        )
+
+    # Update remaining fields
+    for key, value in update_data.items():
         setattr(product, key, value)
-
-    # new values
-    new_stock = product.stock
-    new_min = product.minimum_stock
-    new_state = stock_state(new_stock, new_min)  # type: ignore
-
-    # update total quantity
-    user.total_products += (new_stock - old_stock)  # type: ignore
-
-
-    # handle state transition
-    if old_state != new_state:
-        if old_state == "low":
-            user.low_stock_count -= 1  # type: ignore
-        elif old_state == "out":
-            user.out_of_stock_count -= 1  # type: ignore
-
-        if new_state == "low":
-            user.low_stock_count += 1  # type: ignore
-        elif new_state == "out":
-            user.out_of_stock_count += 1  # type: ignore
 
     db.commit()
     db.refresh(product)
     return product
 
 
-# DELETE
-
+# ---------------- DELETE ----------------
 def delete_product(db: Session, user_id, product_id):
     product = get_product(db, user_id, product_id)
     user = db.query(User).filter(User.id == user_id).first()
 
-    # subtract quantity
-    user.total_products -= product.stock  # type: ignore
-
-
-    # remove stock state
-    state = stock_state(product.stock, product.minimum_stock)  # type: ignore 
-    if state == "low":
-        user.low_stock_count -= 1  # type: ignore
-    elif state == "out":
-        user.out_of_stock -= 1 # type: ignore
+    # 🔥 Let inventory engine handle everything
+    apply_stock_change(
+        user=user,
+        product=product,
+        is_delete=True,
+    )
 
     db.delete(product)
     db.commit()
+
+
+# ---------------- ADD QUANTITY ----------------
+def add_product_quantity(db: Session, user_id, product_id, quantity: int):
+    if quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be positive")
+
+    product = get_product(db, user_id, product_id)
+    user = db.query(User).filter(User.id == user_id).first()
+
+    apply_stock_change(
+        user=user,
+        product=product,
+        quantity_delta=quantity
+    )
+
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+# ---------------- REMOVE QUANTITY ----------------
+def decrease_product_quantity(db: Session, user_id, product_id, quantity: int):
+    if quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be positive")
+
+    product = get_product(db, user_id, product_id)
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if product.stock < quantity:
+        raise HTTPException(
+            status_code=400,
+            detail="Not enough stock available"
+        )
+
+    apply_stock_change(
+        user=user,
+        product=product,
+        quantity_delta=-quantity
+    )
+
+    db.commit()
+    db.refresh(product)
+    return product

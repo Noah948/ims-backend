@@ -8,19 +8,23 @@ from core.dependencies import get_current_user
 from schema.product import (
     ProductCreate,
     ProductUpdate,
-    ProductResponse
+    ProductResponse,
+    QuantityUpdate
 )
 from services.product_service import (
     create_product,
     get_products,
     get_product,
     update_product,
-    delete_product
+    delete_product,
+    add_product_quantity,
+    decrease_product_quantity
 )
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
 
+# ---------------- CREATE ----------------
 @router.post("/", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 def create(
     data: ProductCreate,
@@ -30,6 +34,7 @@ def create(
     return create_product(db, current_user.id, data)
 
 
+# ---------------- LIST ----------------
 @router.get("/", response_model=List[ProductResponse])
 def list_all(
     db: Session = Depends(get_db),
@@ -38,6 +43,7 @@ def list_all(
     return get_products(db, current_user.id)
 
 
+# ---------------- GET ONE ----------------
 @router.get("/{product_id}", response_model=ProductResponse)
 def get_one(
     product_id: UUID,
@@ -47,6 +53,7 @@ def get_one(
     return get_product(db, current_user.id, product_id)
 
 
+# ---------------- UPDATE ----------------
 @router.put("/{product_id}", response_model=ProductResponse)
 def update(
     product_id: UUID,
@@ -57,6 +64,7 @@ def update(
     return update_product(db, current_user.id, product_id, data)
 
 
+# ---------------- DELETE ----------------
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete(
     product_id: UUID,
@@ -64,3 +72,35 @@ def delete(
     current_user=Depends(get_current_user),
 ):
     delete_product(db, current_user.id, product_id)
+
+
+# ---------------- ADD STOCK ----------------
+@router.post("/{product_id}/add", response_model=ProductResponse)
+def add_quantity(
+    product_id: UUID,
+    payload: QuantityUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return add_product_quantity(
+        db,
+        current_user.id,
+        product_id,
+        payload.quantity
+    )
+
+
+# ---------------- REMOVE STOCK ----------------
+@router.post("/{product_id}/remove", response_model=ProductResponse)
+def remove_quantity(
+    product_id: UUID,
+    payload: QuantityUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return decrease_product_quantity(
+        db,
+        current_user.id,
+        product_id,
+        payload.quantity
+    )

@@ -28,6 +28,9 @@ class ProductResponse(BaseModel):
     minimum_stock: int
     dynamic_fields: dict | None
     created_at: datetime
+# ✅ NEW — for add/remove quantity
+class QuantityUpdate(BaseModel):
+    quantity: int    
 
     class Config:
         from_attributes = True

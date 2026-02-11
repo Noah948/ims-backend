@@ -5,12 +5,14 @@ from decimal import Decimal
 
 from models.sale import Sale
 from models.product import Product
+from models.user_model import User
 from schema.sale import SaleCreate
+from utils.inventory import apply_stock_change
 
 
 # ---------------- CREATE ----------------
 def create_sale(db: Session, user_id: str, data: SaleCreate):
-    # Fetch product
+    # fetch product
     stmt = (
         select(Product)
         .where(Product.id == data.product_id)
@@ -21,17 +23,22 @@ def create_sale(db: Session, user_id: str, data: SaleCreate):
     if not product:
         return None, "PRODUCT_NOT_FOUND"
 
-    # ❌ Block if insufficient stock
     if int(product.stock) < int(data.quantity):
         return None, "INSUFFICIENT_STOCK"
 
-    # Profit / Loss calculation
+    user = db.query(User).filter(User.id == user_id).first()
+
+    # ✅ apply inventory change
+    apply_stock_change(
+        user=user,
+        product=product,
+        quantity_delta=-data.quantity
+    )
+
+    # profit / loss
     total_selling = Decimal(data.quantity) * data.selling_price
     total_cost = Decimal(data.quantity) * product.price
     profit_loss = total_selling - total_cost
-
-    # ✅ Reduce stock
-    product.stock -= data.quantity
 
     sale = Sale(
         id=uuid4(),
@@ -47,6 +54,7 @@ def create_sale(db: Session, user_id: str, data: SaleCreate):
     db.commit()
     db.refresh(sale)
     return sale, None
+
 
 # ---------------- READ ALL ----------------
 def get_sales(db: Session, user_id: str):
@@ -76,7 +84,6 @@ def delete_sale(db: Session, user_id: str, sale_id: str):
     if not sale:
         return None
 
-    # Fetch product
     product_stmt = (
         select(Product)
         .where(Product.id == sale.product_id)
@@ -84,9 +91,15 @@ def delete_sale(db: Session, user_id: str, sale_id: str):
     )
     product = db.execute(product_stmt).scalar_one_or_none()
 
+    user = db.query(User).filter(User.id == user_id).first()
+
     if product:
-        # ✅ Restore stock
-        product.stock += sale.quantity
+        # ✅ restore inventory
+        apply_stock_change(
+            user=user,
+            product=product,
+            quantity_delta=sale.quantity
+        )
 
     db.delete(sale)
     db.commit()
