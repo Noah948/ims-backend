@@ -202,16 +202,3 @@ Use PostgreSQL ENUM for:
 More professional.
 
 ---
-
-# 🎯 If I Were You (Next Step Recommendation)
-
-Since you like doing things modular and production-ready:
-
-Next logical feature to build:
-
-> **Purchase + StockMovement system**
-
-That will upgrade your IMS from:
-“CRUD Inventory App”
-to
-“Professional Inventory System”
