@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from datetime import datetime
 from fastapi import HTTPException, status
 
 from models.product import Product
@@ -50,14 +51,15 @@ def create_product(db: Session, user_id, data: ProductCreate):
 
 # ---------------- GET ALL ----------------
 def get_products(db: Session, user_id):
-    return db.query(Product).filter(Product.user_id == user_id).all()
+    return db.query(Product).filter(Product.user_id == user_id, Product.deleted_at.is_(None)).all()
 
 
 # ---------------- GET ONE ----------------
 def get_product(db: Session, user_id, product_id):
     product = db.query(Product).filter(
         Product.id == product_id,
-        Product.user_id == user_id
+        Product.user_id == user_id,
+        Product.deleted_at.is_(None)
     ).first()
 
     if not product:
@@ -118,7 +120,9 @@ def delete_product(db: Session, user_id, product_id):
         is_delete=True,
     )
 
-    db.delete(product)
+
+    # db.delete(product)
+    product.deleted_at = datetime.utcnow()
     db.commit()
 
 
