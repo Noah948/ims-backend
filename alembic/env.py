@@ -11,6 +11,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 # 🔹 Import Base and models
 from core.database import Base
 import models.user_model  # IMPORTANT: load models
+import models.team
+import models.job
+import models.category
+import models.category_field
+import models.product
+import models.sale
+import models.payment
 
 # 🔹 Alembic config
 config = context.config

@@ -1,7 +1,6 @@
 
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from datetime import datetime
 
 from models.user_model import User
 from schema.user import UserCreate
@@ -28,8 +27,6 @@ def register_user(db: Session, data: UserCreate) -> User:
         password_hash=hash_password(data.password),
         contact_number=data.contact_number,
         notifications_enabled=True,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
     )
 
     db.add(user)

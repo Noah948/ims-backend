@@ -1,0 +1,58 @@
+# To add new modal
+```
+I am adding a new [ModelName] to my SaaS inventory system.
+
+Architecture rules:
+- Multi-tenant (user_id required)
+- Soft delete where appropriate
+- PostgreSQL
+- SQLAlchemy ORM with back_populates
+- lazy="selectin"
+- Production ready
+
+Existing relations:
+[short summary only]
+
+Design:
+1. The new model
+2. Relationships needed
+3. If any existing model needs minor addition, show only that part
+4. Keep scalable and clean
+5. Update the Summary i gave with this now model
+```
+--- 
+
+# To update service and route file
+
+```
+I have updated this model and schema:
+
+MODEL:
+
+
+
+SCHEMA:
+
+
+
+Here is my existing service and route file:
+
+SERVICE:
+
+
+
+ROUTE:
+
+
+
+Review everything and:
+1. Identify what must change
+2. Show only necessary modifications
+3. Ensure nothing else breaks
+4. Keep it production-ready
+5. Do not rewrite unrelated code
+6. Give me updated routes and service file to paste and use
+```
+---
+
+

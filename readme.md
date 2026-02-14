@@ -1,37 +1,5 @@
 # TODO
 
-## 1️⃣ Missing: Proper Relationships (ORM Side)
-
-Right now you're using ForeignKeys but not defining relationships everywhere.
-
-For example:
-
-* `User` should have:
-
-  * products
-  * sales
-  * teams
-  * categories
-  * payments
-
-This makes querying MUCH cleaner:
-
-Instead of:
-
-```python
-db.query(Product).filter(Product.user_id == user.id)
-```
-
-You could:
-
-```python
-user.products
-```
-
-That’s more professional ORM usage.
-
----
-
 ## 2️⃣ Sale Table Issue ⚠️ (Important)
 
 Your `Sale` table only stores:
@@ -155,50 +123,5 @@ You can:
 * Send email
 * Send notification
 * Show alert badge
-
----
-
-### 🔹 Use UUID default generation everywhere consistently
-
-Some tables generate in DB, some in Python.
-
-Choose ONE pattern.
-
----
-
-### 🔹 Add Indexes
-
-For example:
-
-* user_id should always be indexed
-* product_id in Sale should be indexed
-* category_id in Product should be indexed
-
-Performance matters in SaaS.
-
----
-
-### 🔹 Add NOT NULL where required
-
-Example:
-Some tables don’t enforce nullable properly.
-
----
-
-### 🔹 Use Enums Instead of Text
-
-Instead of:
-
-```
-status = Column(Text)
-```
-
-Use PostgreSQL ENUM for:
-
-* Payment status
-* Role
-* Field type
-
-More professional.
 
 ---

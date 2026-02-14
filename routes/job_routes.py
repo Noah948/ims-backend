@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+from uuid import UUID
 
 from core.database import get_db
 from core.dependencies import get_current_user
@@ -32,7 +33,7 @@ def create_job_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return create_job(db=db, user_id=str(current_user.id), data=data)
+    return create_job(db=db, user_id=current_user.id, data=data)
 
 
 # ---------------- READ ALL ----------------
@@ -44,7 +45,7 @@ def list_jobs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return get_jobs(db=db, user_id=str(current_user.id))
+    return get_jobs(db=db, user_id=current_user.id)
 
 
 # ---------------- READ SINGLE ----------------
@@ -53,11 +54,11 @@ def list_jobs(
     response_model=JobResponse
 )
 def retrieve_job(
-    job_id: str,
+    job_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    job = get_job(db, user_id=str(current_user.id), job_id=job_id)
+    job = get_job(db, user_id=current_user.id, job_id=job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
@@ -73,14 +74,14 @@ def retrieve_job(
     response_model=JobResponse
 )
 def update_job_endpoint(
-    job_id: str,
+    job_id: UUID,
     data: JobUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     job = update_job(
         db=db,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         job_id=job_id,
         data=data
     )
@@ -95,11 +96,11 @@ def update_job_endpoint(
     status_code=status.HTTP_204_NO_CONTENT
 )
 def delete_job_endpoint(
-    job_id: str,
+    job_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    job = delete_job(db=db, user_id=str(current_user.id), job_id=job_id)
+    job = delete_job(db=db, user_id=current_user.id, job_id=job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return

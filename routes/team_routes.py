@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+from uuid import UUID
 
 from core.database import get_db
 from core.dependencies import get_current_user
@@ -32,7 +33,11 @@ def create_team_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return create_team(db=db, user_id=str(current_user.id), data=data)
+    return create_team(
+        db=db,
+        user_id=current_user.id,
+        data=data
+    )
 
 
 # ---------------- READ ALL ----------------
@@ -44,7 +49,10 @@ def list_teams(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return get_teams(db=db, user_id=str(current_user.id))
+    return get_teams(
+        db=db,
+        user_id=current_user.id
+    )
 
 
 # ---------------- READ SINGLE ----------------
@@ -53,13 +61,19 @@ def list_teams(
     response_model=TeamResponse
 )
 def retrieve_team(
-    team_id: str,
+    team_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    team = get_team(db=db, user_id=str(current_user.id), team_id=team_id)
+    team = get_team(
+        db=db,
+        user_id=current_user.id,
+        team_id=team_id
+    )
+
     if not team:
         raise HTTPException(status_code=404, detail="Team member not found")
+
     return team
 
 
@@ -73,19 +87,21 @@ def retrieve_team(
     response_model=TeamResponse
 )
 def update_team_endpoint(
-    team_id: str,
+    team_id: UUID,
     data: TeamUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     team = update_team(
         db=db,
-        user_id=str(current_user.id),
+        user_id=current_user.id,
         team_id=team_id,
         data=data
     )
+
     if not team:
         raise HTTPException(status_code=404, detail="Team member not found")
+
     return team
 
 
@@ -95,11 +111,17 @@ def update_team_endpoint(
     status_code=status.HTTP_204_NO_CONTENT
 )
 def delete_team_endpoint(
-    team_id: str,
+    team_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    team = delete_team(db=db, user_id=str(current_user.id), team_id=team_id)
+    team = delete_team(
+        db=db,
+        user_id=current_user.id,
+        team_id=team_id
+    )
+
     if not team:
         raise HTTPException(status_code=404, detail="Team member not found")
+
     return

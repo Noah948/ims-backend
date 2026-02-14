@@ -1,10 +1,9 @@
 from pydantic import BaseModel
 from datetime import datetime
-from uuid import UUID
 
 class TimestampSchema(BaseModel):
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

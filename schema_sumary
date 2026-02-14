@@ -1,0 +1,210 @@
+Here is the clean architectural summary file content:
+
+```
+PROJECT: SaaS Inventory Management System
+STACK: FastAPI + SQLAlchemy 2.0 ORM + PostgreSQL
+ARCHITECTURE STYLE: Multi-tenant, Soft-delete aware, Ownership-based isolation
+
+
+============================================================
+1. TABLE LIST
+============================================================
+
+Core Tenant Table:
+- users
+
+Business Domain Tables:
+- products
+- categories
+- category_fields
+- sales
+- teams
+- jobs
+- payments
+
+
+============================================================
+2. PRIMARY RELATIONSHIPS
+============================================================
+
+User (Tenant Root)
+- has many Teams
+- has many Products
+- has many Sales
+- has many Payments
+- has many Jobs
+- has many Categories
+
+Category
+- belongs to User
+- has many CategoryFields
+- has many Products
+
+CategoryField
+- belongs to Category
+
+Product
+- belongs to User
+- belongs to Category (nullable)
+- has many Sales
+
+Sale
+- belongs to User
+- belongs to Product
+
+Team
+- belongs to User
+
+Job
+- belongs to User
+
+Payment
+- belongs to User
+
+
+============================================================
+3. MULTI-TENANT RULES
+============================================================
+
+Tenant Isolation Strategy: Ownership-based via user_id
+
+Tables requiring user_id (strict multi-tenancy):
+- teams
+- products
+- sales
+- payments
+- jobs
+- categories
+
+Tables indirectly tenant-scoped:
+- category_fields (scoped via category → user)
+- sales (scoped via product + user)
+
+Rules:
+- All business data must be filtered by user_id.
+- No cross-user joins allowed.
+- Foreign keys use ON DELETE CASCADE to prevent orphaned tenant data.
+
+
+============================================================
+4. SOFT DELETE vs HARD DELETE
+============================================================
+
+Soft Delete:
+- users (deleted_at)
+- products (deleted_at)
+
+Purpose:
+- Preserve business history.
+- Maintain historical sales integrity.
+- Allow restoration if needed.
+
+Hard Delete:
+- teams
+- jobs
+- category_fields
+- categories (if no longer needed)
+- sales (optional, depending on business logic)
+- payments (optional, usually preserved)
+
+Important:
+Products are soft deleted to preserve historical Sales.
+Sales are considered immutable historical records.
+
+
+============================================================
+5. CASCADE RULES
+============================================================
+
+ON DELETE CASCADE:
+- user → teams
+- user → products
+- user → sales
+- user → payments
+- user → jobs
+- user → categories
+- category → category_fields
+- product → sales
+
+ON DELETE SET NULL:
+- product.category_id (if category removed)
+
+Purpose:
+- Prevent orphaned records.
+- Maintain ownership integrity.
+- Keep historical data consistent.
+
+
+============================================================
+6. IMPORTANT ARCHITECTURAL DECISIONS
+============================================================
+
+1. Sales are Historical Records
+   - Sales are never recalculated automatically.
+   - profit_loss is stored at time of sale.
+   - Product price changes do NOT affect past sales.
+
+2. Inventory Logic
+   - Stock reduction occurs at sale creation.
+   - Sale blocked if stock < quantity.
+   - minimum_stock supports low-stock alerts.
+
+3. Soft Delete Strategy
+   - Products remain for historical reporting.
+   - Users may be soft deleted for compliance.
+
+4. JSONB Dynamic Fields
+   - products.dynamic_fields allows category-driven custom attributes.
+   - Flexible schema without table alteration.
+
+5. Counters in User
+   - total_products
+   - out_of_stock_count
+   - low_stock_count
+   Used for dashboard performance optimization.
+
+6. Selectin Loading
+   - Relationships use lazy="selectin" to prevent N+1 queries.
+   - Optimized for SaaS dashboard usage.
+
+7. UUID Primary Keys
+   - All tables use UUID.
+   - Safe for distributed systems and future scaling.
+
+
+============================================================
+7. ENUMS / CONSTRAINTS IMPACTING DESIGN
+============================================================
+
+Payment.status:
+- active
+- cancelled
+- expired
+
+Business Type (User.business_type):
+- general (default)
+- extendable for vertical-specific SaaS
+
+Integrity Constraints:
+- email unique in users
+- foreign keys enforce tenant ownership
+- NOT NULL on critical ownership columns
+
+
+============================================================
+SYSTEM SUMMARY
+============================================================
+
+This system is a multi-tenant SaaS inventory platform where:
+
+- User is the tenant root.
+- All business data belongs to a user.
+- Products and Sales are core operational tables.
+- Sales are immutable historical financial records.
+- Soft delete is used selectively for historical preservation.
+- JSONB enables flexible category-based product schemas.
+- Cascades protect ownership integrity.
+- Designed for scalability and horizontal growth.
+
+End of Schema Summary.
+```

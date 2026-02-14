@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from core.database import Base, engine
 from core.config import settings
+from models import *
 
 from routes.auth_routes import router as auth_router
 from routes.category_routes import router as category_router

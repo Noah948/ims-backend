@@ -1,35 +1,42 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import datetime
-from typing import List
+from typing import Optional
 
-class CategoryCreate(BaseModel):
-    name: str
+
+# =====================================================
+# Base
+# =====================================================
+
+class CategoryBase(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+
+
+# =====================================================
+# Create
+# =====================================================
+
+class CategoryCreate(CategoryBase):
+    pass
+
+
+# =====================================================
+# Update
+# =====================================================
 
 class CategoryUpdate(BaseModel):
-    name: str
+    name: Optional[str] = Field(None, min_length=2, max_length=100)
+
+
+# =====================================================
+# Public Response
+# =====================================================
 
 class CategoryResponse(BaseModel):
     id: UUID
     name: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-# ---------- Category Fields ----------
-
-class CategoryFieldCreate(BaseModel):
-    field_name: str
-    field_type: str  # text | number | date | dropdown
-    dropdown_options: list[str] | None = None
-
-class CategoryFieldResponse(BaseModel):
-    id: UUID
-    field_name: str
-    field_type: str
-    dropdown_options: list[str] | None
+    updated_at: Optional[datetime]
 
     class Config:
         from_attributes = True

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+from uuid import UUID
 
 from core.database import get_db
 from core.dependencies import get_current_user
@@ -53,11 +54,11 @@ def list_categories(
     response_model=CategoryResponse
 )
 def retrieve_category(
-    category_id: str,
+    category_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    category = get_category(db, user_id=str(current_user.id), category_id=category_id)
+    category = get_category(db, user_id=str(current_user.id), category_id=str(category_id))
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     return category
@@ -73,28 +74,37 @@ def retrieve_category(
     response_model=CategoryResponse
 )
 def update_category_endpoint(
-    category_id: str,
+    category_id: UUID,
     data: CategoryUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    category = update_category(db, user_id=str(current_user.id), category_id=category_id, data=data)
+    category = update_category(
+        db,
+        user_id=str(current_user.id),
+        category_id=str(category_id),
+        data=data
+    )
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     return category
 
 
-# ---------------- DELETE (HARD DELETE) ----------------
+# ---------------- DELETE ----------------
 @router.delete(
     "/{category_id}",
     status_code=status.HTTP_204_NO_CONTENT
 )
 def delete_category_endpoint(
-    category_id: str,
+    category_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    category = delete_category(db, user_id=str(current_user.id), category_id=category_id)
+    category = delete_category(
+        db,
+        user_id=str(current_user.id),
+        category_id=str(category_id)
+    )
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
     return

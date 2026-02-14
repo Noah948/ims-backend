@@ -1,14 +1,17 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from uuid import uuid4
+from uuid import uuid4, UUID
 from datetime import datetime
+from typing import List, Optional
 
 from models.team import Team
 from schema.team import TeamCreate, TeamUpdate
 
 
 # ---------------- CREATE ----------------
-def create_team(db: Session, user_id: str, data: TeamCreate):
+def create_team(db: Session, user_id: UUID, data: TeamCreate) -> Team:
+    now = datetime.utcnow()
+
     team = Team(
         id=uuid4(),
         user_id=user_id,
@@ -19,9 +22,10 @@ def create_team(db: Session, user_id: str, data: TeamCreate):
         contact=data.contact,
         emergency_contact=data.emergency_contact,
         address=data.address,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=now,
+        updated_at=now
     )
+
     db.add(team)
     db.commit()
     db.refresh(team)
@@ -29,13 +33,17 @@ def create_team(db: Session, user_id: str, data: TeamCreate):
 
 
 # ---------------- READ ALL ----------------
-def get_teams(db: Session, user_id: str):
-    stmt = select(Team).where(Team.user_id == user_id)
-    return db.execute(stmt).scalars().all()
+def get_teams(db: Session, user_id: UUID) -> List[Team]:
+    stmt = (
+        select(Team)
+        .where(Team.user_id == user_id)
+        .order_by(Team.created_at.desc())
+    )
+    return list(db.execute(stmt).scalars().all())
 
 
 # ---------------- READ SINGLE ----------------
-def get_team(db: Session, user_id: str, team_id: str):
+def get_team(db: Session, user_id: UUID, team_id: UUID) -> Optional[Team]:
     stmt = (
         select(Team)
         .where(Team.id == team_id)
@@ -45,7 +53,13 @@ def get_team(db: Session, user_id: str, team_id: str):
 
 
 # ---------------- UPDATE ----------------
-def update_team(db: Session, user_id: str, team_id: str, data: TeamUpdate):
+def update_team(
+    db: Session,
+    user_id: UUID,
+    team_id: UUID,
+    data: TeamUpdate
+) -> Optional[Team]:
+
     team = get_team(db, user_id, team_id)
     if not team:
         return None
@@ -53,14 +67,14 @@ def update_team(db: Session, user_id: str, team_id: str, data: TeamUpdate):
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(team, field, value)
 
-    team.updated_at = datetime.utcnow()  # type: ignore
+    team.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(team)
     return team
 
 
 # ---------------- DELETE (HARD DELETE) ----------------
-def delete_team(db: Session, user_id: str, team_id: str):
+def delete_team(db: Session, user_id: UUID, team_id: UUID) -> Optional[Team]:
     team = get_team(db, user_id, team_id)
     if not team:
         return None

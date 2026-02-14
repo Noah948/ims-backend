@@ -1,18 +1,32 @@
 from sqlalchemy.orm import Session
-from datetime import datetime
-from uuid import uuid4
+from sqlalchemy.exc import SQLAlchemyError
+from uuid import uuid4, UUID
 
 from models.category_field import CategoryField
 from models.category import Category
 from schema.category_field import CategoryFieldCreate, CategoryFieldUpdate
 
 
-def create_category_field(db: Session, category_id: str, data: CategoryFieldCreate, user_id: str):
-    # Check if category belongs to user
-    category = db.query(Category).filter(
+# -----------------------------------------------------
+# Internal helper (avoid repeating ownership check)
+# -----------------------------------------------------
+def _get_user_category(db: Session, category_id: UUID, user_id: UUID):
+    return db.query(Category).filter(
         Category.id == category_id,
         Category.user_id == user_id
     ).first()
+
+
+# -----------------------------------------------------
+# Create
+# -----------------------------------------------------
+def create_category_field(
+    db: Session,
+    category_id: UUID,
+    data: CategoryFieldCreate,
+    user_id: UUID
+):
+    category = _get_user_category(db, category_id, user_id)
     if not category:
         return None
 
@@ -22,22 +36,23 @@ def create_category_field(db: Session, category_id: str, data: CategoryFieldCrea
         field_name=data.field_name,
         field_type=data.field_type,
         dropdown_options=data.dropdown_options,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
     )
 
-    db.add(field)
-    db.commit()
-    db.refresh(field)
-    return field
+    try:
+        db.add(field)
+        db.commit()
+        db.refresh(field)
+        return field
+    except SQLAlchemyError:
+        db.rollback()
+        raise
 
 
-def get_category_fields(db: Session, category_id: str, user_id: str):
-    # Ensure category belongs to user
-    category = db.query(Category).filter(
-        Category.id == category_id,
-        Category.user_id == user_id
-    ).first()
+# -----------------------------------------------------
+# List
+# -----------------------------------------------------
+def get_category_fields(db: Session, category_id: UUID, user_id: UUID):
+    category = _get_user_category(db, category_id, user_id)
     if not category:
         return []
 
@@ -46,11 +61,16 @@ def get_category_fields(db: Session, category_id: str, user_id: str):
     ).all()
 
 
-def get_category_field(db: Session, category_id: str, field_id: str, user_id: str):
-    category = db.query(Category).filter(
-        Category.id == category_id,
-        Category.user_id == user_id
-    ).first()
+# -----------------------------------------------------
+# Get single
+# -----------------------------------------------------
+def get_category_field(
+    db: Session,
+    category_id: UUID,
+    field_id: UUID,
+    user_id: UUID
+):
+    category = _get_user_category(db, category_id, user_id)
     if not category:
         return None
 
@@ -60,29 +80,62 @@ def get_category_field(db: Session, category_id: str, field_id: str, user_id: st
     ).first()
 
 
-def update_category_field(db: Session, category_id: str, field_id: str, data: CategoryFieldUpdate, user_id: str):
+# -----------------------------------------------------
+# Update
+# -----------------------------------------------------
+def update_category_field(
+    db: Session,
+    category_id: UUID,
+    field_id: UUID,
+    data: CategoryFieldUpdate,
+    user_id: UUID
+):
     field = get_category_field(db, category_id, field_id, user_id)
     if not field:
         return None
 
-    if data.field_name is not None:
-        field.field_name = data.field_name
-    if data.field_type is not None:
-        field.field_type = data.field_type
-    if data.dropdown_options is not None:
-        field.dropdown_options = data.dropdown_options
+    update_data = data.model_dump(exclude_unset=True)
 
-    field.updated_at = datetime.utcnow()
-    db.commit()
-    db.refresh(field)
-    return field
+    # Handle type change safely
+    if "field_type" in update_data:
+        field.field_type = update_data["field_type"]
+
+        # If changed to non-dropdown → remove options
+        if update_data["field_type"] != "dropdown":
+            field.dropdown_options = None
+
+    if "field_name" in update_data:
+        field.field_name = update_data["field_name"]
+
+    if "dropdown_options" in update_data:
+        field.dropdown_options = update_data["dropdown_options"]
+
+    try:
+        db.commit()
+        db.refresh(field)
+        return field
+    except SQLAlchemyError:
+        db.rollback()
+        raise
 
 
-def delete_category_field(db: Session, category_id: str, field_id: str, user_id: str):
+# -----------------------------------------------------
+# Delete
+# -----------------------------------------------------
+def delete_category_field(
+    db: Session,
+    category_id: UUID,
+    field_id: UUID,
+    user_id: UUID
+):
     field = get_category_field(db, category_id, field_id, user_id)
     if not field:
         return None
 
-    db.delete(field)
-    db.commit()
-    return field
+    try:
+        db.delete(field)
+        db.commit()
+        return field
+    except SQLAlchemyError:
+        db.rollback()
+        raise
