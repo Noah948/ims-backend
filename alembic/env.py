@@ -14,10 +14,10 @@ import models.user_model  # IMPORTANT: load models
 import models.team
 import models.job
 import models.category
-import models.category_field
 import models.product
 import models.sale
 import models.payment
+import models.audit_log
 
 # 🔹 Alembic config
 config = context.config

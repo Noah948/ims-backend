@@ -70,3 +70,10 @@ class User(Base):
     payments: Mapped[List["Payment"]] = relationship(back_populates="user", lazy="selectin")
     jobs: Mapped[List["Job"]] = relationship(back_populates="user", lazy="selectin")
     categories: Mapped[List["Category"]] = relationship(back_populates="user", lazy="selectin")
+    audit_logs = relationship(
+    "AuditLog",
+    back_populates="user",
+    cascade="all, delete",
+    lazy="selectin"
+)
+

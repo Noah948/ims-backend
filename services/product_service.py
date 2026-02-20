@@ -1,7 +1,5 @@
 from sqlalchemy.orm import Session
-from datetime import datetime
 from fastapi import HTTPException, status
-
 from models.product import Product
 from models.category import Category
 from models.user_model import User
@@ -9,10 +7,51 @@ from schema.product import ProductCreate, ProductUpdate
 from utils.inventory import apply_stock_change
 
 
-# ---------------- CREATE ----------------
+# ---------------- VALIDATION HELPER ----------------
+
+def validate_dynamic_fields(category: Category, product_fields: dict):
+    """
+    Ensures product dynamic fields match category defined fields.
+    """
+
+    if not category.fields:
+        if product_fields:
+            raise HTTPException(
+                status_code=400,
+                detail="This category does not allow dynamic fields"
+            )
+        return
+
+    allowed_fields = {field["key"]: field for field in category.fields}
+
+    # Check for invalid keys
+    for key in product_fields.keys():
+        if key not in allowed_fields:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Field '{key}' is not allowed for this category"
+            )
+
+    # Optional: Type validation (basic)
+    for key, value in product_fields.items():
+        expected_type = allowed_fields[key]["type"]
+
+        if expected_type == "string" and not isinstance(value, str):
+            raise HTTPException(status_code=400, detail=f"{key} must be string")
+
+        if expected_type == "number" and not isinstance(value, (int, float)):
+            raise HTTPException(status_code=400, detail=f"{key} must be number")
+
+        if expected_type == "date" and not isinstance(value, str):
+            raise HTTPException(status_code=400, detail=f"{key} must be date string")
+
+
+# ---------------- CREATE PRODUCT ----------------
+
 def create_product(db: Session, user_id, data: ProductCreate):
 
-    # Validate category if provided
+    category = None
+
     if data.category_id:
         category = db.query(Category).filter(
             Category.id == data.category_id,
@@ -22,6 +61,10 @@ def create_product(db: Session, user_id, data: ProductCreate):
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
 
+    # Validate dynamic fields
+    if category:
+        validate_dynamic_fields(category, data.dynamic_fields or {})
+
     user = db.query(User).filter(User.id == user_id).first()
 
     product = Product(
@@ -29,7 +72,7 @@ def create_product(db: Session, user_id, data: ProductCreate):
         category_id=data.category_id,
         name=data.name,
         price=data.price,
-        stock=0,  # inventory engine will adjust
+        stock=0,
         minimum_stock=data.minimum_stock,
         dynamic_fields=data.dynamic_fields,
     )
@@ -37,7 +80,6 @@ def create_product(db: Session, user_id, data: ProductCreate):
     db.add(product)
     db.flush()
 
-    # Register through inventory layer
     if data.stock:
         apply_stock_change(
             user=user,
@@ -52,6 +94,7 @@ def create_product(db: Session, user_id, data: ProductCreate):
 
 
 # ---------------- GET ALL ----------------
+
 def get_products(db: Session, user_id):
     return db.query(Product).filter(
         Product.user_id == user_id,
@@ -60,6 +103,7 @@ def get_products(db: Session, user_id):
 
 
 # ---------------- GET ONE ----------------
+
 def get_product(db: Session, user_id, product_id):
     product = db.query(Product).filter(
         Product.id == product_id,
@@ -76,8 +120,10 @@ def get_product(db: Session, user_id, product_id):
     return product
 
 
-# ---------------- UPDATE ----------------
+# ---------------- UPDATE PRODUCT ----------------
+
 def update_product(db: Session, user_id, product_id, data: ProductUpdate):
+
     product = get_product(db, user_id, product_id)
     user = db.query(User).filter(User.id == user_id).first()
 
@@ -95,7 +141,8 @@ def update_product(db: Session, user_id, product_id, data: ProductUpdate):
     if "minimum_stock" in update_data:
         new_minimum_stock = update_data.pop("minimum_stock")
 
-    # Validate category change
+    # Handle category change
+    category = None
     if "category_id" in update_data and update_data["category_id"]:
         category = db.query(Category).filter(
             Category.id == update_data["category_id"],
@@ -104,8 +151,14 @@ def update_product(db: Session, user_id, product_id, data: ProductUpdate):
 
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
+    else:
+        category = product.category
 
-    # Inventory engine handles stock logic
+    # Validate dynamic fields if updating them
+    if "dynamic_fields" in update_data:
+        validate_dynamic_fields(category, update_data["dynamic_fields"] or {})
+
+    # Inventory logic
     if quantity_delta != 0 or new_minimum_stock is not None:
         apply_stock_change(
             user=user,
@@ -114,7 +167,7 @@ def update_product(db: Session, user_id, product_id, data: ProductUpdate):
             new_minimum_stock=new_minimum_stock,
         )
 
-    # Update remaining fields
+    # Update other fields
     for key, value in update_data.items():
         setattr(product, key, value)
 
@@ -123,8 +176,10 @@ def update_product(db: Session, user_id, product_id, data: ProductUpdate):
     return product
 
 
-# ---------------- DELETE (Soft Delete) ----------------
+# ---------------- DELETE PRODUCT ----------------
+
 def delete_product(db: Session, user_id, product_id):
+
     product = get_product(db, user_id, product_id)
     user = db.query(User).filter(User.id == user_id).first()
 
@@ -134,13 +189,16 @@ def delete_product(db: Session, user_id, product_id):
         is_delete=True,
     )
 
-    product.deleted_at = datetime.utcnow()
+    db.delete(product)
     db.commit()
+
     return None
 
 
 # ---------------- ADD QUANTITY ----------------
+
 def add_product_quantity(db: Session, user_id, product_id, quantity: int):
+
     if quantity <= 0:
         raise HTTPException(status_code=400, detail="Quantity must be positive")
 
@@ -159,7 +217,9 @@ def add_product_quantity(db: Session, user_id, product_id, quantity: int):
 
 
 # ---------------- REMOVE QUANTITY ----------------
+
 def decrease_product_quantity(db: Session, user_id, product_id, quantity: int):
+
     if quantity <= 0:
         raise HTTPException(status_code=400, detail="Quantity must be positive")
 

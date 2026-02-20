@@ -58,9 +58,15 @@ def retrieve_category(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    category = get_category(db, user_id=str(current_user.id), category_id=str(category_id))
+    category = get_category(
+        db,
+        user_id=str(current_user.id),
+        category_id=str(category_id)
+    )
+
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
+
     return category
 
 
@@ -80,13 +86,15 @@ def update_category_endpoint(
     current_user: User = Depends(get_current_user)
 ):
     category = update_category(
-        db,
+        db=db,
         user_id=str(current_user.id),
         category_id=str(category_id),
         data=data
     )
+
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
+
     return category
 
 
@@ -100,11 +108,13 @@ def delete_category_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    category = delete_category(
-        db,
+    deleted = delete_category(
+        db=db,
         user_id=str(current_user.id),
         category_id=str(category_id)
     )
-    if not category:
+
+    if not deleted:
         raise HTTPException(status_code=404, detail="Category not found")
+
     return

@@ -1,9 +1,7 @@
-Here is the clean architectural summary file content:
-
-```
 PROJECT: SaaS Inventory Management System
 STACK: FastAPI + SQLAlchemy 2.0 ORM + PostgreSQL
 ARCHITECTURE STYLE: Multi-tenant, Soft-delete aware, Ownership-based isolation
+AUDIT SYSTEM: Event-driven, ORM-level automatic logging
 
 
 ============================================================
@@ -22,6 +20,9 @@ Business Domain Tables:
 - jobs
 - payments
 
+System Tables:
+- audit_logs
+
 
 ============================================================
 2. PRIMARY RELATIONSHIPS
@@ -34,6 +35,7 @@ User (Tenant Root)
 - has many Payments
 - has many Jobs
 - has many Categories
+- has many AuditLogs
 
 Category
 - belongs to User
@@ -61,6 +63,13 @@ Job
 Payment
 - belongs to User
 
+AuditLog
+- belongs to User
+- stores entity_type
+- stores entity_id
+- stores operation (CREATE | UPDATE | DELETE)
+- stores created_at timestamp
+
 
 ============================================================
 3. MULTI-TENANT RULES
@@ -68,22 +77,25 @@ Payment
 
 Tenant Isolation Strategy: Ownership-based via user_id
 
-Tables requiring user_id (strict multi-tenancy):
+Tables requiring direct user_id:
 - teams
 - products
 - sales
 - payments
 - jobs
 - categories
+- audit_logs
 
 Tables indirectly tenant-scoped:
-- category_fields (scoped via category → user)
-- sales (scoped via product + user)
+- category_fields (via category → user)
+- sales (via product + user)
 
 Rules:
-- All business data must be filtered by user_id.
+- All business queries must filter by user_id.
 - No cross-user joins allowed.
 - Foreign keys use ON DELETE CASCADE to prevent orphaned tenant data.
+- Audit logs are also tenant-isolated via user_id.
+- Audit system never exposes cross-tenant operations.
 
 
 ============================================================
@@ -94,22 +106,23 @@ Soft Delete:
 - users (deleted_at)
 - products (deleted_at)
 
-Purpose:
-- Preserve business history.
-- Maintain historical sales integrity.
-- Allow restoration if needed.
+Soft Delete Behavior:
+- UPDATE operation is logged in audit_logs.
+- Historical sales remain intact.
+- Product remains for financial reporting.
 
 Hard Delete:
 - teams
 - jobs
 - category_fields
-- categories (if no longer needed)
-- sales (optional, depending on business logic)
-- payments (optional, usually preserved)
+- categories (if safe)
+- sales (optional, depending on policy)
+- payments (optional)
 
 Important:
-Products are soft deleted to preserve historical Sales.
-Sales are considered immutable historical records.
+- Products are soft deleted to preserve historical Sales.
+- Sales are immutable financial records.
+- Audit logs capture DELETE events for traceability.
 
 
 ============================================================
@@ -123,53 +136,74 @@ ON DELETE CASCADE:
 - user → payments
 - user → jobs
 - user → categories
+- user → audit_logs
 - category → category_fields
 - product → sales
 
 ON DELETE SET NULL:
-- product.category_id (if category removed)
+- product.category_id
 
 Purpose:
 - Prevent orphaned records.
 - Maintain ownership integrity.
-- Keep historical data consistent.
+- Ensure tenant cleanup consistency.
+- Keep audit trail tenant-contained.
 
 
 ============================================================
 6. IMPORTANT ARCHITECTURAL DECISIONS
 ============================================================
 
-1. Sales are Historical Records
-   - Sales are never recalculated automatically.
-   - profit_loss is stored at time of sale.
+1. Sales Are Immutable Financial Records
+   - profit_loss stored at time of sale.
    - Product price changes do NOT affect past sales.
+   - Sales never auto-recalculate.
 
 2. Inventory Logic
-   - Stock reduction occurs at sale creation.
+   - Stock reduces at sale creation.
    - Sale blocked if stock < quantity.
-   - minimum_stock supports low-stock alerts.
+   - minimum_stock supports alerts.
+   - Stock changes can be audited.
 
 3. Soft Delete Strategy
-   - Products remain for historical reporting.
-   - Users may be soft deleted for compliance.
+   - Products retained for reporting.
+   - Users soft-deletable for compliance.
+   - Deletion events logged automatically.
 
 4. JSONB Dynamic Fields
-   - products.dynamic_fields allows category-driven custom attributes.
-   - Flexible schema without table alteration.
+   - products.dynamic_fields enables category-driven schema flexibility.
+   - No table migration needed for new product attributes.
 
 5. Counters in User
    - total_products
    - out_of_stock_count
    - low_stock_count
-   Used for dashboard performance optimization.
+   Optimized for dashboard performance.
 
 6. Selectin Loading
-   - Relationships use lazy="selectin" to prevent N+1 queries.
-   - Optimized for SaaS dashboard usage.
+   - lazy="selectin" prevents N+1 queries.
+   - Optimized for SaaS dashboards.
 
 7. UUID Primary Keys
    - All tables use UUID.
-   - Safe for distributed systems and future scaling.
+   - Scalable for distributed systems.
+
+8. Automatic ORM-Level Audit Logging
+   - Implemented using SQLAlchemy session events.
+   - Triggers on:
+       CREATE
+       UPDATE (column-level detection)
+       DELETE
+   - Automatically extracts user_id (direct or via FK).
+   - Fully model-agnostic.
+   - No manual logging required in services.
+   - Works for all tenant-scoped tables.
+
+9. Event-Driven Logging Architecture
+   - Audit logs generated in after_flush event.
+   - Prevents duplicate logs.
+   - Safe during transaction rollback.
+   - Cleared automatically post-flush.
 
 
 ============================================================
@@ -187,24 +221,49 @@ Business Type (User.business_type):
 
 Integrity Constraints:
 - email unique in users
-- foreign keys enforce tenant ownership
-- NOT NULL on critical ownership columns
+- NOT NULL on ownership columns
+- Foreign keys enforce tenant isolation
+- Audit logs require valid user_id
+
+
+============================================================
+8. AUDIT SYSTEM SUMMARY
+============================================================
+
+The system includes a global automatic audit mechanism where:
+
+- Every CREATE, UPDATE, DELETE operation is logged.
+- Logging is automatic via SQLAlchemy events.
+- No manual logging required in business services.
+- Audit logs are tenant-isolated.
+- Logs are safe from recursive logging.
+- Designed for ERP-grade traceability.
+
+Current Scope:
+- Operation-level tracking.
+
+Future Upgrade Path:
+- Field-level diff tracking
+- Old vs new value storage
+- Soft-delete flag detection
+- Actor metadata (IP, device)
+- Role-based audit filtering
 
 
 ============================================================
 SYSTEM SUMMARY
 ============================================================
 
-This system is a multi-tenant SaaS inventory platform where:
+This system is a production-ready multi-tenant SaaS inventory platform where:
 
 - User is the tenant root.
 - All business data belongs to a user.
-- Products and Sales are core operational tables.
-- Sales are immutable historical financial records.
-- Soft delete is used selectively for historical preservation.
-- JSONB enables flexible category-based product schemas.
-- Cascades protect ownership integrity.
+- Products and Sales are operational core tables.
+- Sales are immutable financial history.
+- Soft delete preserves historical integrity.
+- JSONB enables flexible product schema.
+- Cascades maintain ownership integrity.
+- Automatic audit logging ensures traceability.
 - Designed for scalability and horizontal growth.
 
-End of Schema Summary.
-```
+End of Updated Schema Summary.

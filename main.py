@@ -7,11 +7,14 @@ from models import *
 
 from routes.auth_routes import router as auth_router
 from routes.category_routes import router as category_router
-from routes.category_field_routes import router as category_field_router
 from routes.product_routes import router as product_router  
 from routes.job_routes import router as job_router  
 from routes.team_routes import router as team_router  
 from routes.sale_routes import router as sale_router  
+from utils.audit_listener import register_audit_listeners
+
+
+
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -32,10 +35,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+#audit function
+register_audit_listeners()
 # ✅ Routers
 app.include_router(category_router)
-app.include_router(category_field_router)
 app.include_router(product_router)
 app.include_router(sale_router)
 app.include_router(job_router)

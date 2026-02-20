@@ -1,12 +1,12 @@
 from sqlalchemy.orm import Session
 from uuid import uuid4
+from sqlalchemy import func
 
 from models.category import Category
 from models.product import Product
 from models.user_model import User
 from schema.category import CategoryCreate, CategoryUpdate
 from utils.category_del_inventory import get_category_stock_impact
-from sqlalchemy import func
 
 
 # ---------------- CREATE ----------------
@@ -15,11 +15,14 @@ def create_category(db: Session, user_id: str, data: CategoryCreate) -> Category
         id=uuid4(),
         user_id=user_id,
         name=data.name,
+        fields=[field.model_dump() for field in data.fields] if data.fields else []
     )
     db.add(category)
     db.commit()
     db.refresh(category)
     return category
+
+
 
 
 # ---------------- READ ALL ----------------
@@ -37,7 +40,7 @@ def get_category(db: Session, user_id: str, category_id: str):
     ).first()
 
 
-# ---------------- UPDATE (PATCH SAFE) ----------------
+# ---------------- UPDATE ----------------
 def update_category(db: Session, user_id: str, category_id: str, data: CategoryUpdate):
     category = get_category(db, user_id, category_id)
     if not category:
@@ -53,7 +56,7 @@ def update_category(db: Session, user_id: str, category_id: str, data: CategoryU
     return category
 
 
-# ---------------- DELETE (ATOMIC + SAFE) ----------------
+# ---------------- DELETE (ATOMIC + HARD DELETE PRODUCTS) ----------------
 def delete_category(db: Session, category_id: str, user_id: str):
 
     category = db.query(Category).filter(
@@ -65,35 +68,35 @@ def delete_category(db: Session, category_id: str, user_id: str):
         return None
 
     try:
-        with db.begin():
+        # 1️⃣ Calculate aggregate impact
+        impact = get_category_stock_impact(db, category_id, user_id)
+        if impact is None:
+            impact = (0, 0, 0)
 
-            # 1️⃣ Calculate aggregate impact
-            impact = get_category_stock_impact(db, category_id, user_id)
-            if impact is None:
-                impact = (0, 0, 0)
-            total_stock, out_count, low_count = impact
+        total_stock, out_count, low_count = impact
 
-            # 2️⃣ Atomic user update
-            db.query(User).filter(User.id == user_id).update({
-                User.total_products: User.total_products - total_stock,
-                User.out_of_stock_count: User.out_of_stock_count - out_count,
-                User.low_stock_count: User.low_stock_count - low_count,
-            })
+        # 2️⃣ Atomic user counters update
+        db.query(User).filter(User.id == user_id).update({
+            User.total_products: User.total_products - total_stock,
+            User.out_of_stock_count: User.out_of_stock_count - out_count,
+            User.low_stock_count: User.low_stock_count - low_count,
+        })
 
-            # 3️⃣ Bulk soft delete products
-            db.query(Product).filter(
-                Product.category_id == category_id,
-                Product.user_id == user_id
-            ).update({
-                Product.deleted_at: func.now(),
-                Product.category_id: None
-            }, synchronize_session=False)
+        # 3️⃣ HARD DELETE products in this category
+        db.query(Product).filter(
+            Product.category_id == category_id,
+            Product.user_id == user_id
+        ).delete(synchronize_session=False)
 
-            # 4️⃣ Delete category
-            db.delete(category)
+        # 4️⃣ Delete category
+        db.delete(category)
+
+        # ✅ Single commit at the end
+        db.commit()
 
         return True
 
     except Exception:
         db.rollback()
         raise
+

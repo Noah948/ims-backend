@@ -8,7 +8,6 @@ from datetime import datetime
 from sqlalchemy.sql import func
 from core.database import Base
 
-# Forward references for type hints
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -26,7 +25,11 @@ class Product(Base):
         Index("ix_products_deleted_at", "deleted_at"),
     )
 
-    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4
+    )
 
     user_id: Mapped[PyUUID] = mapped_column(
         UUID(as_uuid=True),
@@ -34,23 +37,62 @@ class Product(Base):
         nullable=False
     )
 
-    category_id: Mapped[Optional[PyUUID]] = mapped_column(
+    # 🔥 CHANGED TO CASCADE
+    category_id: Mapped[PyUUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("categories.id", ondelete="SET NULL")
+        ForeignKey("categories.id", ondelete="CASCADE"),
+        nullable=False
     )
 
-    price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    name: Mapped[str] = mapped_column(Text, nullable=False)
+    price: Mapped[float] = mapped_column(
+        Numeric(10, 2),
+        nullable=False
+    )
 
-    stock: Mapped[int] = mapped_column(Integer, nullable=False)
-    minimum_stock: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(
+        Text,
+        nullable=False
+    )
 
-    dynamic_fields: Mapped[Optional[dict]] = mapped_column(JSONB)
+    stock: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
 
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
-    updated_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, onupdate=func.now())
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP)
+    minimum_stock: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
 
-    user: Mapped["User"] = relationship(back_populates="products", lazy="selectin")
-    category: Mapped[Optional["Category"]] = relationship(back_populates="products", lazy="selectin")
-    sales: Mapped[List["Sale"]] = relationship(back_populates="product", lazy="selectin")
+    dynamic_fields: Mapped[Optional[dict]] = mapped_column(
+        JSONB
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP,
+        server_default=func.now()
+    )
+
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP,
+        onupdate=func.now()
+    )
+
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP
+    )
+
+    user: Mapped["User"] = relationship(
+        back_populates="products",
+        lazy="selectin"
+    )
+
+    category: Mapped["Category"] = relationship(
+        back_populates="products",
+        lazy="selectin"
+    )
+
+    sales: Mapped[List["Sale"]] = relationship(
+        back_populates="product",
+        lazy="selectin"
+    )
