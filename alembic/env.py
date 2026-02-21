@@ -18,6 +18,7 @@ import models.product
 import models.sale
 import models.payment
 import models.audit_log
+import models.expense
 
 # 🔹 Alembic config
 config = context.config

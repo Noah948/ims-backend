@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from .payment import Payment
     from .job import Job
     from .category import Category
+    from .audit_log import AuditLog
+    from .expense import Expense
 
 
 class User(Base):
@@ -75,5 +77,10 @@ class User(Base):
     back_populates="user",
     cascade="all, delete",
     lazy="selectin"
+    )
+    expenses: Mapped[list["Expense"]] = relationship(
+    back_populates="user",
+    lazy="selectin",
+    cascade="all, delete-orphan"
 )
 

@@ -11,10 +11,8 @@ from routes.product_routes import router as product_router
 from routes.job_routes import router as job_router  
 from routes.team_routes import router as team_router  
 from routes.sale_routes import router as sale_router  
+from routes.expense_routes import router as expense_router
 from utils.audit_listener import register_audit_listeners
-
-
-
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -43,6 +41,7 @@ app.include_router(product_router)
 app.include_router(sale_router)
 app.include_router(job_router)
 app.include_router(team_router)
+app.include_router(expense_router)
 app.include_router(auth_router)
 
 
