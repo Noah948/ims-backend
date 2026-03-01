@@ -9,6 +9,7 @@ from models.product import Product
 from models.user_model import User
 from schema.sale import SaleCreate
 from utils.inventory import apply_stock_change
+from utils.pagination import paginate
 
 
 # ---------------- CREATE ----------------
@@ -65,9 +66,20 @@ def create_sale(db: Session, user_id: UUID, data: SaleCreate):
 
 
 # ---------------- READ ALL ----------------
-def get_sales(db: Session, user_id: UUID):
-    stmt = select(Sale).where(Sale.user_id == user_id)
-    return db.execute(stmt).scalars().all()
+def get_sales(
+    db: Session,
+    user_id: UUID,
+    page: int = 1,
+    limit: int = 10
+):
+
+    query = (
+        select(Sale)
+        .where(Sale.user_id == user_id)
+        .order_by(Sale.created_at.desc())  # MUST have ordering
+    )
+
+    return paginate(query, db, page, limit)
 
 
 # ---------------- READ SINGLE ----------------

@@ -12,6 +12,7 @@ from routes.job_routes import router as job_router
 from routes.team_routes import router as team_router  
 from routes.sale_routes import router as sale_router  
 from routes.expense_routes import router as expense_router
+from routes.audit_logs import router as audit_log_router
 from utils.audit_listener import register_audit_listeners
 
 # Create database tables
@@ -21,7 +22,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
     openapi_url="/openapi.json",
-    docs_url="/docs",
+    docs_url="/",
     redoc_url="/redoc",
 )
 
@@ -33,16 +34,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 #audit function
 register_audit_listeners()
+
 # ✅ Routers
+app.include_router(auth_router)
 app.include_router(category_router)
 app.include_router(product_router)
 app.include_router(sale_router)
+app.include_router(audit_log_router)
+app.include_router(expense_router)
 app.include_router(job_router)
 app.include_router(team_router)
-app.include_router(expense_router)
-app.include_router(auth_router)
 
 
 @app.get("/", tags=["Health"])

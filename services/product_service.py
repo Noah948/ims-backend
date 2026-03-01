@@ -5,6 +5,8 @@ from models.category import Category
 from models.user_model import User
 from schema.product import ProductCreate, ProductUpdate
 from utils.inventory import apply_stock_change
+from sqlalchemy import select
+from utils.pagination import paginate
 
 
 # ---------------- VALIDATION HELPER ----------------
@@ -95,12 +97,18 @@ def create_product(db: Session, user_id, data: ProductCreate):
 
 # ---------------- GET ALL ----------------
 
-def get_products(db: Session, user_id):
-    return db.query(Product).filter(
-        Product.user_id == user_id,
-        Product.deleted_at.is_(None)
-    ).all()
+def get_products(db: Session, user_id, page: int = 1, limit: int = 10):
 
+    query = (
+        select(Product)
+        .where(
+            Product.user_id == user_id,
+            Product.deleted_at.is_(None)
+        )
+        .order_by(Product.created_at.desc())  # IMPORTANT
+    )
+
+    return paginate(query, db, page, limit)
 
 # ---------------- GET ONE ----------------
 

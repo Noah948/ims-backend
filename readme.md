@@ -28,23 +28,6 @@ Professionally, Sale should not depend too much on Product.
 
 ---
 
-## 4️⃣ No Audit Logs (Very Professional Feature)
-
-Add:
-
-### 🧾 ActivityLog Table
-
-Store:
-
-* user_id
-* action_type (created_product, deleted_category, etc.)
-* reference_id
-* timestamp
-
-For real SaaS this is powerful.
-
----
-
 ## 5️⃣ Soft Delete Consistency
 
 You soft delete Product.
@@ -64,22 +47,6 @@ deleted_at column in Category
 ```
 
 Instead of actual delete.
-
----
-
-## 2️⃣ Expense Tracking
-
-Inventory is not only sale.
-Add:
-
-* Expense table
-* Rent, electricity, salary etc.
-
-Then you can calculate:
-
-```
-Net Profit = Sales - Expenses
-```
 
 ---
 

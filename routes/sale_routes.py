@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
@@ -13,6 +13,7 @@ from services.sale_service import (
     get_sale,
     delete_sale
 )
+from schema.common import PaginatedResponse
 
 router = APIRouter(prefix="/sales", tags=["Sales"])
 
@@ -49,15 +50,19 @@ def create_sale_endpoint(
 # ---------------- READ ALL ----------------
 @router.get(
     "/",
-    response_model=List[SaleResponse]
+    response_model=PaginatedResponse[SaleResponse]
 )
 def list_sales(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     return get_sales(
         db=db,
-        user_id=current_user.id
+        user_id=current_user.id,
+        page=page,
+        limit=limit
     )
 
 

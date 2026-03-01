@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Sequence
 from uuid import UUID
+from schema.common import PaginatedResponse
 
 from core.database import get_db
 from core.dependencies import get_current_user
@@ -33,12 +34,19 @@ def create(
     return create_product(db, current_user.id, data)
 
 
-@router.get("/", response_model=List[ProductResponse])
+@router.get("/", response_model=PaginatedResponse[ProductResponse])
 def list_all(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
-) -> Sequence[ProductResponse]:
-    return get_products(db, current_user.id)
+):
+    return get_products(
+        db=db,
+        user_id=current_user.id,
+        page=page,
+        limit=limit
+    )
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
