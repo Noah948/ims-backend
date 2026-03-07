@@ -1,4 +1,3 @@
-
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
@@ -12,24 +11,29 @@ def register_user(db: Session, data: UserCreate) -> User:
     Register a new user.
     """
 
-    existing_user = db.query(User).filter(User.email == data.email).first()
+    # Check duplicate email or contact
+    existing_user = db.query(User).filter(
+        (User.email == data.email) |
+        (User.contact_number == data.contact_number)
+    ).first()
+
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered",
+            detail="User with same email or contact already exists",
         )
 
     user = User(
-        name=data.name,
+        user_name=data.user_name,
         business_name=data.business_name,
-        business_type=data.business_type,
         email=data.email,
         password_hash=hash_password(data.password),
         contact_number=data.contact_number,
-        notifications_enabled=True,
+        avatar=data.avatar
     )
 
     db.add(user)
     db.commit()
     db.refresh(user)
+
     return user

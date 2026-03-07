@@ -16,19 +16,22 @@ class JobBase(BaseModel):
     location: Optional[str] = Field(None, min_length=2)
     salary: Optional[str] = Field(None, min_length=2)
     email: Optional[EmailStr] = None
-    contact: Optional[str] = None
+
+    # REQUIRED CONTACT
+    contact: str
 
     @field_validator("contact")
     @classmethod
-    def validate_contact(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-
+    def validate_contact(cls, v: str) -> str:
         cleaned = v.replace(" ", "").replace("+", "")
+
         if not cleaned.isdigit():
             raise ValueError("Contact must contain only numbers")
 
-        return v
+        if len(cleaned) != 10:
+            raise ValueError("Contact must be exactly 10 digits")
+
+        return cleaned
 
 
 # =====================================================
@@ -60,10 +63,14 @@ class JobUpdate(BaseModel):
             return v
 
         cleaned = v.replace(" ", "").replace("+", "")
+
         if not cleaned.isdigit():
             raise ValueError("Contact must contain only numbers")
 
-        return v
+        if len(cleaned) != 10:
+            raise ValueError("Contact must be exactly 10 digits")
+
+        return cleaned
 
 
 # =====================================================
@@ -79,7 +86,7 @@ class JobResponse(BaseModel):
     location: Optional[str]
     salary: Optional[str]
     email: Optional[EmailStr]
-    contact: Optional[str]
+    contact: str
 
     created_at: Optional[datetime]
     updated_at: Optional[datetime]

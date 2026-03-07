@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, TIMESTAMP, ForeignKey, Index, Text
+from sqlalchemy import Integer, TIMESTAMP, ForeignKey, Index, Text, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Numeric
@@ -8,7 +8,6 @@ from datetime import datetime
 from sqlalchemy.sql import func
 from core.database import Base
 
-# Forward references for type hints
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -22,6 +21,10 @@ class Sale(Base):
     __table_args__ = (
         Index("ix_sales_user_id", "user_id"),
         Index("ix_sales_product_id", "product_id"),
+        CheckConstraint(
+            "contact ~ '^[0-9]{10}$'",
+            name="ck_sales_contact_10_digits"
+        ),
     )
 
     id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
@@ -42,8 +45,13 @@ class Sale(Base):
     selling_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     profit_loss: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
 
-    contact: Mapped[Optional[str]] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
+    # REQUIRED 10 DIGIT CONTACT
+    contact: Mapped[str] = mapped_column(Text, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP,
+        server_default=func.now()
+    )
 
     user: Mapped["User"] = relationship(back_populates="sales", lazy="selectin")
     product: Mapped["Product"] = relationship(back_populates="sales", lazy="selectin")

@@ -6,27 +6,28 @@ from typing import Optional
 
 
 # =====================================================
-# Create Sale (Immutable Record)
+# Create Sale
 # =====================================================
 
 class SaleCreate(BaseModel):
     product_id: UUID
     quantity: int = Field(..., gt=0)
     selling_price: Decimal = Field(..., gt=0)
-    contact: Optional[str] = None
+
+    contact: str
 
     @field_validator("contact")
     @classmethod
-    def validate_contact(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-
+    def validate_contact(cls, v: str) -> str:
         cleaned = v.replace(" ", "").replace("+", "")
 
         if not cleaned.isdigit():
             raise ValueError("Contact must contain only numbers")
 
-        return v
+        if len(cleaned) != 10:
+            raise ValueError("Contact must be exactly 10 digits")
+
+        return cleaned
 
 
 # =====================================================
@@ -41,7 +42,7 @@ class SaleResponse(BaseModel):
     selling_price: Decimal
     profit_loss: Decimal
 
-    contact: Optional[str]
+    contact: str
     created_at: datetime
 
     class Config:

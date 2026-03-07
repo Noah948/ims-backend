@@ -1,4 +1,4 @@
-from sqlalchemy import Text, TIMESTAMP, ForeignKey
+from sqlalchemy import Text, TIMESTAMP, ForeignKey, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional
 from uuid import UUID as PyUUID
@@ -6,14 +6,21 @@ from datetime import datetime
 from sqlalchemy.dialects.postgresql import UUID
 from core.database import Base
 
-# Forward references for type hints
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .user_model import User
 
+
 class Job(Base):
     __tablename__ = "jobs"
+
+    __table_args__ = (
+        CheckConstraint(
+            "contact ~ '^[0-9]{10}$'",
+            name="ck_jobs_contact_10_digits"
+        ),
+    )
 
     id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
 
@@ -30,7 +37,9 @@ class Job(Base):
     location: Mapped[Optional[str]] = mapped_column(Text)
     salary: Mapped[Optional[str]] = mapped_column(Text)
     email: Mapped[Optional[str]] = mapped_column(Text)
-    contact: Mapped[Optional[str]] = mapped_column(Text)
+
+    # REQUIRED 10 digit contact
+    contact: Mapped[str] = mapped_column(Text, nullable=False)
 
     created_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP)
     updated_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP)
