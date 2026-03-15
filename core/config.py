@@ -10,6 +10,12 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    # Email settings
+    EMAIL_USER: str = ""
+    EMAIL_PASS: str = ""
+    SMTP_SERVER: str = ""
+    SMTP_PORT: int = 465
+
     # # Razorpay
     # RAZORPAY_KEY_ID: str = ""
     # RAZORPAY_KEY_SECRET: str = ""
