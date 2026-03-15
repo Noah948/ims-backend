@@ -1,4 +1,4 @@
-from sqlalchemy import Text, TIMESTAMP, ForeignKey, Index
+from sqlalchemy import Text, TIMESTAMP, ForeignKey, Index, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -22,7 +22,7 @@ class AuditLog(Base):
     id: Mapped[PyUUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
-        server_default="gen_random_uuid()"
+        server_default=text("gen_random_uuid()")
     )
 
     user_id: Mapped[PyUUID] = mapped_column(

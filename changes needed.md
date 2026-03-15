@@ -10,4 +10,4 @@
    contact must be of 10 digits,
    email should be unique, we can create a metadata file that will have all emails for easy lookup in entire DB
 3. while making sale contact must be of 10 digits
-
+4. for testing make 100 rows for some table, see time taken in terminal and choose a server
