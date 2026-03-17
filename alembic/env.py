@@ -19,6 +19,7 @@ import models.sale
 import models.payment
 import models.audit_log
 import models.expense
+import models.password_reset_otp
 
 # 🔹 Alembic config
 config = context.config
