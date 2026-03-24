@@ -1,3 +1,8 @@
+# Commands
+
+venv\Scripts\activate
+
+
 # TODO
 
 ## 2️⃣ Sale Table Issue ⚠️ (Important)

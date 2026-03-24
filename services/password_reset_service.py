@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import bcrypt
+import secrets
 
 from models.password_reset_otp import PasswordResetOTP
 from models.user_model import User
@@ -54,10 +55,9 @@ def verify_otp(db: Session, email: str, otp: str):
     )
 
     if not record:
-        return False
+        return None
 
     if bcrypt.checkpw(otp.encode(), record.otp.encode()):
-        record.is_used = True
         record.failed_attempts = 0
         db.commit()
         return True
@@ -66,11 +66,10 @@ def verify_otp(db: Session, email: str, otp: str):
         if record.failed_attempts >= MAX_OTP_FAILURES:
             record.is_used = True
         db.commit()
-        return False
-
+        return None
 
 # ---------------- RESET PASSWORD ----------------
-def reset_password(db: Session, email: str, otp: str, new_password: str):
+def reset_password(db: Session, email: str, new_password: str):
 
     now = datetime.utcnow()
 
@@ -88,13 +87,6 @@ def reset_password(db: Session, email: str, otp: str, new_password: str):
     if not record:
         return False
 
-    if not bcrypt.checkpw(otp.encode(), record.otp.encode()):
-        record.failed_attempts += 1
-        if record.failed_attempts >= MAX_OTP_FAILURES:
-            record.is_used = True
-        db.commit()
-        return False
-
     user = db.query(User).filter(User.email == email).first()
 
     if not user:
@@ -103,10 +95,6 @@ def reset_password(db: Session, email: str, otp: str, new_password: str):
     user.password_hash = hash_password(new_password)
 
     record.is_used = True
-    record.failed_attempts = 0
-    db.commit()
-
-    return True
 
     db.commit()
 
