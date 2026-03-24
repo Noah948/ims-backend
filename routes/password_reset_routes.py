@@ -23,15 +23,23 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # ---------------- REQUEST OTP ----------------
 @router.post("/forgot-password")
-def forgot_password(
-    data: ForgotPasswordRequest,
-    db: Session = Depends(get_db)
-):
+def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    request_password_reset(db, data.email)
+    return {"message": "OTP sent to your email"}
 
-    result = request_password_reset(db, data.email)
 
-    return {"message": "OTP sent to email"}
+@router.post("/verify-otp")
+def verify_otp_endpoint(data: VerifyOTPRequest, db: Session = Depends(get_db)):
 
+    token = verify_otp(db, data.email, data.otp)
+
+    if not token:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+
+    return {
+        "message": "OTP verified",
+        "reset_token": token
+    }
 
 # ---------------- VERIFY OTP ----------------
 @router.post("/verify-otp")
@@ -56,20 +64,19 @@ def verify_otp_endpoint(
 
 # ---------------- RESET PASSWORD ----------------
 @router.post("/reset-password")
-def reset_password_endpoint(
-    data: ResetPasswordRequest,
-    db: Session = Depends(get_db)
-):
+def reset_password_endpoint(data: ResetPasswordRequest, db: Session = Depends(get_db)):
+
     success = reset_password(
         db,
         data.email,
-        data.new_password   # ✅ no OTP, no token
+        data.reset_token,
+        data.new_password
     )
 
     if not success:
         raise HTTPException(
             status_code=400,
-            detail="OTP not verified or expired"
+            detail="Invalid or expired reset token"
         )
 
     return {"message": "Password reset successful"}

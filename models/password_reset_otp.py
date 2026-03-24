@@ -22,12 +22,23 @@ class PasswordResetOTP(Base):
         index=True
     )
 
-    otp: Mapped[str] = mapped_column(
+    otp_hash: Mapped[str] = mapped_column(
         String(128),
         nullable=False
     )
 
+    reset_token: Mapped[str | None] = mapped_column(
+        String(128),
+        nullable=True,
+        index=True
+    )
+
     is_used: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False
+    )
+
+    is_deleted: Mapped[bool] = mapped_column(
         Boolean,
         default=False
     )
@@ -46,3 +57,5 @@ class PasswordResetOTP(Base):
         TIMESTAMP,
         server_default=func.now()
     )
+
+

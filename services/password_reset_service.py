@@ -17,23 +17,24 @@ def request_password_reset(db: Session, email: str):
 
     user = db.query(User).filter(User.email == email).first()
 
-    if user:
-        otp = generate_otp()
+    if not user:
+        return True  # prevent user enumeration
 
-        otp_hash = bcrypt.hashpw(otp.encode(), bcrypt.gensalt()).decode()
+    otp = generate_otp()
+    otp_hash = bcrypt.hashpw(otp.encode(), bcrypt.gensalt()).decode()
 
-        expires_at = datetime.utcnow() + timedelta(minutes=10)
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
 
-        otp_record = PasswordResetOTP(
-            email=email,
-            otp=otp_hash,
-            expires_at=expires_at,
-        )
+    otp_record = PasswordResetOTP(
+        email=email,
+        otp_hash=otp_hash,
+        expires_at=expires_at,
+    )
 
-        send_password_reset_otp(email, otp)
+    send_password_reset_otp(email, otp)
 
-        db.add(otp_record)
-        db.commit()
+    db.add(otp_record)
+    db.commit()
 
     return True
 
@@ -48,6 +49,7 @@ def verify_otp(db: Session, email: str, otp: str):
         .filter(
             PasswordResetOTP.email == email,
             PasswordResetOTP.is_used == False,
+            PasswordResetOTP.is_deleted == False,
             PasswordResetOTP.expires_at > now
         )
         .order_by(PasswordResetOTP.created_at.desc())
@@ -57,19 +59,29 @@ def verify_otp(db: Session, email: str, otp: str):
     if not record:
         return None
 
-    if bcrypt.checkpw(otp.encode(), record.otp.encode()):
+    if bcrypt.checkpw(otp.encode(), record.otp_hash.encode()):
+
+        # 🔐 generate secure reset token
+        reset_token = secrets.token_urlsafe(32)
+
+        record.reset_token = reset_token
         record.failed_attempts = 0
+
         db.commit()
-        return True
+
+        return reset_token
+
     else:
         record.failed_attempts += 1
+
         if record.failed_attempts >= MAX_OTP_FAILURES:
             record.is_used = True
+
         db.commit()
         return None
 
 # ---------------- RESET PASSWORD ----------------
-def reset_password(db: Session, email: str, new_password: str):
+def reset_password(db: Session, email: str, reset_token: str, new_password: str):
 
     now = datetime.utcnow()
 
@@ -77,10 +89,11 @@ def reset_password(db: Session, email: str, new_password: str):
         db.query(PasswordResetOTP)
         .filter(
             PasswordResetOTP.email == email,
+            PasswordResetOTP.reset_token == reset_token,
             PasswordResetOTP.is_used == False,
+            PasswordResetOTP.is_deleted == False,
             PasswordResetOTP.expires_at > now
         )
-        .order_by(PasswordResetOTP.created_at.desc())
         .first()
     )
 
@@ -92,9 +105,12 @@ def reset_password(db: Session, email: str, new_password: str):
     if not user:
         return False
 
+    # 🔐 update password
     user.password_hash = hash_password(new_password)
 
+    # ✅ mark OTP as consumed + soft delete
     record.is_used = True
+    record.is_deleted = True
 
     db.commit()
 
