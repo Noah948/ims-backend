@@ -28,18 +28,18 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
     return {"message": "OTP sent to your email"}
 
 
-@router.post("/verify-otp")
-def verify_otp_endpoint(data: VerifyOTPRequest, db: Session = Depends(get_db)):
+# @router.post("/verify-otp")
+# def verify_otp_endpoint(data: VerifyOTPRequest, db: Session = Depends(get_db)):
 
-    token = verify_otp(db, data.email, data.otp)
+#     token = verify_otp(db, data.email, data.otp)
 
-    if not token:
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+#     if not token:
+#         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
-    return {
-        "message": "OTP verified",
-        "reset_token": token
-    }
+#     return {
+#         "message": "OTP verified",
+#         "reset_token": token
+#     }
 
 # ---------------- VERIFY OTP ----------------
 @router.post("/verify-otp")

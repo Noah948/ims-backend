@@ -10,9 +10,7 @@ from schema.user import UserCreate, UserResponse, UserLogin
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-# ==============================
 # REGISTER
-# ==============================
 @router.post("/register", response_model=UserResponse)
 def register(
     data: UserCreate,
@@ -21,9 +19,7 @@ def register(
     return register_user(db, data)
 
 
-# ==============================
 # LOGIN (JSON BASED)
-# ==============================
 @router.post("/login")
 def login(
     data: UserLogin,
@@ -43,9 +39,7 @@ def login(
     )
 
 
-# ==============================
 # CURRENT USER
-# ==============================
 @router.get("/me", response_model=UserResponse)
 def me(user=Depends(get_current_user)):
     return user
