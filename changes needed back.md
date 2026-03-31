@@ -17,3 +17,6 @@
 8. what is the use of fetching single product?
 9. remove single job if not needed, remove put patch also
 10. add location to user object and it will be null when created, if user wants to add job then he has to update location.
+11. need to make another server file for cron jobs
+12. new otp service for account deletion confirmation
+13. in frontend we have category field when creating expence and i think it will be better to put in backend also but options must be lesser
