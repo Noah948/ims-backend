@@ -30,6 +30,7 @@ class User(Base):
         Index("ix_users_email", "email"),
         Index("ix_users_contact", "contact_number"),
         Index("ix_users_deleted_at", "deleted_at"),
+        Index("ix_users_location", "location"),  # ✅ NEW INDEX
     )
 
     id: Mapped[PyUUID] = mapped_column(
@@ -48,6 +49,9 @@ class User(Base):
 
     avatar: Mapped[Optional[str]] = mapped_column(Text)
 
+    # ✅ NEW FIELD
+    location: Mapped[Optional[str]] = mapped_column(Text)
+
     subscription_start_date: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP)
     subscription_end_date: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP)
 
@@ -56,7 +60,11 @@ class User(Base):
     low_stock_count: Mapped[int] = mapped_column(Integer, server_default="0", nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP,
+        server_default=func.now(),
+        onupdate=func.now()
+    )
     deleted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP)
 
     # Relationships
@@ -74,7 +82,7 @@ class User(Base):
         lazy="selectin"
     )
 
-    expenses: Mapped[list["Expense"]] = relationship(
+    expenses: Mapped[List["Expense"]] = relationship(
         back_populates="user",
         lazy="selectin",
         cascade="all, delete-orphan"

@@ -14,4 +14,4 @@
 15. if someone deletes account and comes after 6-7 months then his email id will be saved with us ad service will start only after payment is done
 
 
-Abdullah: 1,5,6,7
+Abdullah: 7

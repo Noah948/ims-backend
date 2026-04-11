@@ -29,7 +29,8 @@ def register_user(db: Session, data: UserCreate) -> User:
         email=data.email,
         password_hash=hash_password(data.password),
         contact_number=data.contact_number,
-        avatar=data.avatar
+        avatar=data.avatar,
+        location=data.location  # ✅ NEW LINE
     )
 
     db.add(user)

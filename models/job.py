@@ -32,7 +32,8 @@ class Job(Base):
 
     business_name: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # ❌ description removed
 
     location: Mapped[Optional[str]] = mapped_column(Text)
     salary: Mapped[Optional[str]] = mapped_column(Text)

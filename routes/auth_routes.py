@@ -25,13 +25,6 @@ def login(
     data: UserLogin,
     db: Session = Depends(get_db),
 ):
-    """
-    Accepts JSON:
-    {
-        "email": "user@example.com",
-        "password": "password123"
-    }
-    """
     return authenticate_user(
         db=db,
         email=data.email,

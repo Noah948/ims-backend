@@ -8,9 +8,12 @@ from alembic import context
 # 🔹 Make project root importable
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+# 🔹 Import settings
+from core.config import settings
+
 # 🔹 Import Base and models
 from core.database import Base
-import models.user_model  # IMPORTANT: load models
+import models.user_model
 import models.team
 import models.job
 import models.category
@@ -23,6 +26,9 @@ import models.password_reset_otp
 
 # 🔹 Alembic config
 config = context.config
+
+# ✅ IMPORTANT FIX: Use app DB URL
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # 🔹 Logging
 if config.config_file_name is not None:
@@ -56,7 +62,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            compare_type=True,      # detects column type changes
+            compare_type=True,
             compare_server_default=True
         )
 

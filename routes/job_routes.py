@@ -6,20 +6,30 @@ from uuid import UUID
 from core.database import get_db
 from core.dependencies import get_current_user
 from models.user_model import User
-from schema.job import (
-    JobCreate,
-    JobUpdate,
-    JobResponse
-)
+from schema.job import JobCreate, JobUpdate, JobResponse
+
 from services.job_service import (
     create_job,
     get_jobs,
     get_job,
     update_job,
-    delete_job
+    delete_job,
+    get_public_jobs
 )
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
+
+
+# ---------------- PUBLIC JOB LIST (NO AUTH) ----------------
+@router.get(
+    "/",
+    response_model=List[JobResponse]
+)
+def list_public_jobs(
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    return get_public_jobs(db=db, limit=limit)
 
 
 # ---------------- CREATE ----------------
@@ -36,12 +46,12 @@ def create_job_endpoint(
     return create_job(db=db, user_id=current_user.id, data=data)
 
 
-# ---------------- READ ALL ----------------
+# ---------------- READ ALL (USER - PRIVATE) ----------------
 @router.get(
-    "/",
+    "/my",
     response_model=List[JobResponse]
 )
-def list_jobs(
+def list_my_jobs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

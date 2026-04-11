@@ -2,7 +2,6 @@ from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 from uuid import UUID
 from typing import Optional
-import re
 
 
 # =====================================================
@@ -19,6 +18,9 @@ class UserBase(BaseModel):
     )
 
     avatar: Optional[str] = None
+
+    # ✅ NEW FIELD
+    location: Optional[str] = None
 
 
 # =====================================================
@@ -50,6 +52,9 @@ class UserUpdate(BaseModel):
 
     avatar: Optional[str] = None
 
+    # ✅ NEW FIELD (important for updating later)
+    location: Optional[str] = None
+
 
 # =====================================================
 # Public Response
@@ -64,6 +69,9 @@ class UserResponse(BaseModel):
 
     contact_number: Optional[str]
     avatar: Optional[str]
+
+    # ✅ NEW FIELD (so frontend can use it)
+    location: Optional[str]
 
     subscription_start_date: Optional[datetime]
     subscription_end_date: Optional[datetime]

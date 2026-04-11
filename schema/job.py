@@ -11,7 +11,8 @@ from typing import Optional
 class JobBase(BaseModel):
     business_name: str = Field(..., min_length=2)
     title: str = Field(..., min_length=2)
-    description: str = Field(..., min_length=10)
+
+    # ❌ description removed
 
     location: Optional[str] = Field(None, min_length=2)
     salary: Optional[str] = Field(None, min_length=2)
@@ -49,7 +50,8 @@ class JobCreate(JobBase):
 class JobUpdate(BaseModel):
     business_name: Optional[str] = Field(None, min_length=2)
     title: Optional[str] = Field(None, min_length=2)
-    description: Optional[str] = Field(None, min_length=10)
+
+    # ❌ description removed
 
     location: Optional[str] = Field(None, min_length=2)
     salary: Optional[str] = Field(None, min_length=2)
@@ -81,7 +83,8 @@ class JobResponse(BaseModel):
     id: UUID
     business_name: str
     title: str
-    description: str
+
+    # ❌ description removed
 
     location: Optional[str]
     salary: Optional[str]
