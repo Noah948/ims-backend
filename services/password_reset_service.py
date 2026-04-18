@@ -21,6 +21,7 @@ def request_password_reset(db: Session, email: str):
         return True  # prevent user enumeration
 
     otp = generate_otp()
+    print("OTP:"+otp)
     otp_hash = bcrypt.hashpw(otp.encode(), bcrypt.gensalt()).decode()
 
     expires_at = datetime.utcnow() + timedelta(minutes=10)
