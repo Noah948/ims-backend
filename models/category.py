@@ -2,9 +2,11 @@ from sqlalchemy import Text, TIMESTAMP, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
-from typing import List, Optional
+
+from typing import List, Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime
+
 from core.database import Base
 
 from typing import TYPE_CHECKING
@@ -31,9 +33,22 @@ class Category(Base):
 
     name: Mapped[str] = mapped_column(Text, nullable=False)
 
-    fields: Mapped[Optional[List[dict]]] = mapped_column(
+    # ✅ Structured JSONB field
+    # Expected format:
+    # [
+    #   {
+    #       "id": "uuid",          # unique identifier (used in routes)
+    #       "key": "color",        # unique per category
+    #       "type": "string",
+    #       "required": True,
+    #       "order": 1,            # controls ordering (NOT array index)
+    #       "meta": {}             # optional extensible data
+    #   }
+    # ]
+    fields: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
         JSONB,
-        nullable=True
+        nullable=True,
+        default=list
     )
 
     created_at: Mapped[datetime] = mapped_column(
@@ -52,9 +67,23 @@ class Category(Base):
         lazy="selectin"
     )
 
-    # 🔥 CASCADE DELETE ENABLED
     products: Mapped[List["Product"]] = relationship(
         back_populates="category",
         lazy="selectin",
         cascade="all, delete-orphan"
     )
+
+    # =========================
+    # 🔹 Minimal Helper Methods
+    # =========================
+
+    def ensure_fields(self) -> None:
+        """Ensure fields is always initialized as a list"""
+        if self.fields is None:
+            self.fields = []
+
+    def get_field(self, field_id: str) -> Optional[Dict[str, Any]]:
+        """Safely retrieve a field by ID"""
+        if not self.fields:
+            return None
+        return next((f for f in self.fields if f.get("id") == field_id), None)
