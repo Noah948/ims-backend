@@ -47,7 +47,7 @@ class Expense(Base):
         nullable=False
     )
 
-    description: Mapped[Optional[str]] = mapped_column(Text)
+    # description: Mapped[Optional[str]] = mapped_column(Text)
 
     is_recurring: Mapped[bool] = mapped_column(
         Boolean,

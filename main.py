@@ -14,6 +14,7 @@ from routes.sale_routes import router as sale_router
 from routes.expense_routes import router as expense_router
 from routes.audit_logs import router as audit_log_router
 from routes.password_reset_routes import router as password_reset_router
+from routes.account_routes import router as account_router
 from utils.audit_listener import register_audit_listeners
 
 # Create database tables
@@ -41,6 +42,7 @@ register_audit_listeners()
 
 # ✅ Routers
 app.include_router(auth_router)
+app.include_router(account_router)
 app.include_router(password_reset_router)
 app.include_router(category_router)
 app.include_router(product_router)

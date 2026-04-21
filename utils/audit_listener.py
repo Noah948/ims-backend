@@ -1,9 +1,27 @@
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from models.audit_log import AuditLog
+from datetime import datetime
 
 # Fields that should NOT trigger audit updates
 IGNORED_FIELDS = {"updated_at", "created_at"}
+
+
+# =====================================================
+# SERIALIZATION HELPERS (FIX FOR JSONB)
+# =====================================================
+
+def _serialize_value(value):
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return value
+
+
+def _serialize_dict(data):
+    if not data:
+        return data
+    return {k: _serialize_value(v) for k, v in data.items()}
+
 
 # =====================================================
 # REGISTER LISTENERS
@@ -52,8 +70,11 @@ def register_audit_listeners():
                 history = state.attrs[key].history
 
                 if history.has_changes():
-                    old_values[key] = history.deleted[0] if history.deleted else None
-                    new_values[key] = history.added[0] if history.added else None
+                    old_val = history.deleted[0] if history.deleted else None
+                    new_val = history.added[0] if history.added else None
+
+                    old_values[key] = _serialize_value(old_val)
+                    new_values[key] = _serialize_value(new_val)
 
             if not old_values:
                 continue
@@ -85,7 +106,7 @@ def register_audit_listeners():
             )
 
     # -----------------------------------------------------
-    # SAFELY CREATE AUDIT LOGS AFTER FLUSH
+    # CREATE AUDIT LOGS AFTER FLUSH
     # -----------------------------------------------------
 
     @event.listens_for(Session, "after_flush_postexec")
@@ -128,8 +149,8 @@ def _build_change_payload(instance, operation, old_values=None, new_values=None)
         "entity_type": instance.__class__.__name__.lower(),
         "entity_id": getattr(instance, "id", None),
         "operation": operation,
-        "old_values": old_values,
-        "new_values": new_values,
+        "old_values": _serialize_dict(old_values),
+        "new_values": _serialize_dict(new_values),
     }
 
 

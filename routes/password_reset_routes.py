@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-from models.password_reset_otp import PasswordResetOTP
+# from models.password_reset_otp import PasswordResetOTP
 from models.user_model import User
 from utils.password import hash_password
 
@@ -12,9 +12,15 @@ from schema.password_reset import (
     VerifyOTPRequest,
     ResetPasswordRequest
 )
+# from services.password_reset_service import (
+#     request_password_reset,
+#     verify_otp,
+#     reset_password
+# )
+
 from services.password_reset_service import (
     request_password_reset,
-    verify_otp,
+    verify_reset_otp,
     reset_password
 )
 
@@ -28,33 +34,14 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
     return {"message": "OTP sent to your email"}
 
 
-# @router.post("/verify-otp")
-# def verify_otp_endpoint(data: VerifyOTPRequest, db: Session = Depends(get_db)):
-
-#     token = verify_otp(db, data.email, data.otp)
-
-#     if not token:
-#         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-
-#     return {
-#         "message": "OTP verified",
-#         "reset_token": token
-#     }
-
 # ---------------- VERIFY OTP ----------------
 @router.post("/verify-otp")
-def verify_otp_endpoint(
-    data: VerifyOTPRequest,
-    db: Session = Depends(get_db)
-):
+def verify_otp_endpoint(data: VerifyOTPRequest, db: Session = Depends(get_db)):
 
-    token = verify_otp(db, data.email, data.otp)
+    token = verify_reset_otp(db, data.email, data.otp)
 
     if not token:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid or expired OTP"
-        )
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
     return {
         "message": "OTP verified",

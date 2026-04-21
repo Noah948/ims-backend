@@ -1,23 +1,23 @@
-# services/password_reset_service.py
+# services/account_service.py
+
+import datetime
 
 from sqlalchemy.orm import Session
 from models.user_model import User
-from utils.password import hash_password
 from services.otp_service import create_and_send_otp, verify_otp, consume_token
 
+PURPOSE = "ACCOUNT_DELETE"
 
-PURPOSE = "PASSWORD_RESET"
 
-
-def request_password_reset(db: Session, email: str):
+def request_account_deletion(db: Session, email: str):
     return create_and_send_otp(db, email, PURPOSE)
 
 
-def verify_reset_otp(db: Session, email: str, otp: str):
+def verify_delete_otp(db: Session, email: str, otp: str):
     return verify_otp(db, email, otp, PURPOSE)
 
 
-def reset_password(db: Session, email: str, token: str, new_password: str):
+def delete_account(db: Session, email: str, token: str):
 
     valid = consume_token(db, email, token, PURPOSE)
 
@@ -29,7 +29,8 @@ def reset_password(db: Session, email: str, token: str, new_password: str):
     if not user:
         return False
 
-    user.password_hash = hash_password(new_password)
+    # SOFT DELETE
+    user.deleted_at = datetime.datetime.utcnow()
 
     db.commit()
 

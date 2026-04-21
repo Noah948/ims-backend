@@ -13,7 +13,7 @@ class ExpenseBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     amount: Decimal = Field(..., gt=0)
     expense_date: date
-    description: Optional[str] = None
+    # description: Optional[str] = None
     is_recurring: bool = False
 
 
@@ -33,7 +33,7 @@ class ExpenseUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=255)
     amount: Optional[Decimal] = Field(None, gt=0)
     expense_date: Optional[date] = None
-    description: Optional[str] = None
+    # description: Optional[str] = None
     is_recurring: Optional[bool] = None
 
 

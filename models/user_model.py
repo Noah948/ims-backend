@@ -49,7 +49,6 @@ class User(Base):
 
     avatar: Mapped[Optional[str]] = mapped_column(Text)
 
-    # ✅ NEW FIELD
     location: Mapped[Optional[str]] = mapped_column(Text)
 
     subscription_start_date: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP)

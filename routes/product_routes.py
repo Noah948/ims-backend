@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
-from typing import List, Sequence
+# from typing import List, Sequence
 from uuid import UUID
 from schema.common import PaginatedResponse
 

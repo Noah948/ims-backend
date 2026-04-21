@@ -17,7 +17,7 @@ def create_expense(db: Session, user_id: UUID, data: ExpenseCreate):
             title=data.title,
             amount=data.amount,
             expense_date=data.expense_date,
-            description=data.description,
+            # description=data.description,
             is_recurring=data.is_recurring,
         )
 
