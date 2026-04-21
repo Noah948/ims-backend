@@ -9,6 +9,7 @@ FieldType = Literal["text", "number", "date"]
 class CategoryFieldItem(BaseModel):
     key: str = Field(..., min_length=2, max_length=100)
     type: FieldType
+    order: int
 
 
 class CategoryBase(BaseModel):

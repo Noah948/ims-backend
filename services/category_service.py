@@ -11,34 +11,50 @@ from utils.category_del_inventory import get_category_stock_impact
 
 # ---------------- CREATE ----------------
 def create_category(db: Session, user_id: str, data: CategoryCreate) -> Category:
+    fields = []
+
+    if data.fields:
+        for index, field in enumerate(data.fields, start=1):
+            field_dict = field.model_dump()
+            field_dict["order"] = index  # 🔥 assign order
+            fields.append(field_dict)
+
     category = Category(
         id=uuid4(),
         user_id=user_id,
         name=data.name,
-        fields=[field.model_dump() for field in data.fields] if data.fields else []
+        fields=fields
     )
+
     db.add(category)
     db.commit()
     db.refresh(category)
     return category
 
 
-
-
 # ---------------- READ ALL ----------------
 def get_categories(db: Session, user_id: str):
-    return db.query(Category).filter(
+    categories = db.query(Category).filter(
         Category.user_id == user_id,
     ).all()
 
+    for category in categories:
+        if category.fields:
+            category.fields = sorted(category.fields, key=lambda x: x.get("order", 0))
+
+    return categories
 
 # ---------------- READ SINGLE ----------------
 def get_category(db: Session, user_id: str, category_id: str):
-    return db.query(Category).filter(
+    category = db.query(Category).filter(
         Category.id == category_id,
         Category.user_id == user_id,
     ).first()
 
+    if category and category.fields:
+        category.fields = sorted(category.fields, key=lambda x: x.get("order", 0))
+
+    return category
 
 # ---------------- UPDATE ----------------
 def update_category(db: Session, user_id: str, category_id: str, data: CategoryUpdate):
@@ -48,13 +64,21 @@ def update_category(db: Session, user_id: str, category_id: str, data: CategoryU
 
     update_data = data.model_dump(exclude_unset=True)
 
-    for field, value in update_data.items():
-        setattr(category, field, value)
+    if "fields" in update_data:
+        fields = update_data["fields"]
+
+        # 🔥 normalize order (1,2,3…)
+        for index, field in enumerate(fields, start=1):
+            field["order"] = index
+
+        category.fields = fields
+
+    if "name" in update_data:
+        category.name = update_data["name"]
 
     db.commit()
     db.refresh(category)
     return category
-
 
 # ---------------- DELETE (ATOMIC + HARD DELETE PRODUCTS) ----------------
 def delete_category(db: Session, category_id: str, user_id: str):
