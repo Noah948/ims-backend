@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     EMAIL_PASS: str = ""
     SMTP_SERVER: str = ""
     SMTP_PORT: int = 465
+    FRONTEND_URL:str= ""
 
     # # Razorpay
     # RAZORPAY_KEY_ID: str = ""
