@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     PROJECT_NAME: str = "IMS Backend"
     DATABASE_URL: str = ""
+    FRONTEND_URL: str = ""
 
     JWT_SECRET_KEY: str = ""
     JWT_ALGORITHM: str = "HS256"
@@ -15,7 +16,6 @@ class Settings(BaseSettings):
     EMAIL_PASS: str = ""
     SMTP_SERVER: str = ""
     SMTP_PORT: int = 465
-    FRONTEND_URL:str= ""
 
     # # Razorpay
     # RAZORPAY_KEY_ID: str = ""

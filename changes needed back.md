@@ -7,6 +7,6 @@
 11. need to make another server file for cron jobs
 15. if someone deletes account and comes after 6-7 months then his email id will be saved with us ad service will start only after payment is done
 <!-- 17. i want the category fields to have index to change structure as per need -->
-
+18. make export button work in audit logs
 
 Abdullah: 1
