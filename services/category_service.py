@@ -1,3 +1,5 @@
+from unicodedata import category
+
 from sqlalchemy.orm import Session
 from uuid import uuid4
 from typing import Dict
@@ -157,7 +159,7 @@ def update_category_field(
     category.fields = new_fields
 
     # optional: sort
-    if "order" in updates:
+    if "order" in updates and category.fields:
         category.fields.sort(key=lambda x: x["order"])
 
     db.commit()
@@ -174,11 +176,17 @@ def delete_category_field(db: Session, user_id: str, category_id: str, field_id:
 
     original_len = len(category.fields)
 
-    category.fields = [f for f in category.fields if f["id"] != field_id]
+    new_fields = [f for f in category.fields if f["id"] != field_id]
+
+    # normalize order
+    for index, field in enumerate(sorted(new_fields, key=lambda x: x["order"]), start=1):
+        field["order"] = index
+
+    category.fields = new_fields
 
     db.commit()
 
-    return len(category.fields) != original_len
+    return len(category.fields or []) != original_len
 
 
 # ---------------- REORDER FIELDS ----------------
@@ -192,11 +200,16 @@ def reorder_category_fields(
     if not category or not category.fields:
         return None
 
+    new_fields = []
+
     for field in category.fields:
         if field["id"] in order_map:
-            field["order"] = order_map[field["id"]]
+            updated = {**field, "order": order_map[field["id"]]}
+            new_fields.append(updated)
+        else:
+            new_fields.append(field)
 
-    category.fields = sorted(category.fields, key=lambda x: x["order"])
+    category.fields = sorted(new_fields, key=lambda x: x["order"])
 
     db.commit()
     db.refresh(category)
