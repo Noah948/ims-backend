@@ -8,5 +8,7 @@
 15. if someone deletes account and comes after 6-7 months then his email id will be saved with us ad service will start only after payment is done
 <!-- 17. i want the category fields to have index to change structure as per need -->
 18. make export button work in audit logs
+19. during account creation we need to verify email exist or not
+20. make delete all routes for features where it can be used
 
 Abdullah: 1

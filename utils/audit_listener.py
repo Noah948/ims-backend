@@ -2,6 +2,8 @@ from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from models.audit_log import AuditLog
 from datetime import datetime
+from decimal import Decimal
+from uuid import UUID
 
 # Fields that should NOT trigger audit updates
 IGNORED_FIELDS = {"updated_at", "created_at"}
@@ -12,16 +14,39 @@ IGNORED_FIELDS = {"updated_at", "created_at"}
 # =====================================================
 
 def _serialize_value(value):
+
     if isinstance(value, datetime):
         return value.isoformat()
+
+    if isinstance(value, Decimal):
+        return float(value)
+
+    if isinstance(value, UUID):
+        return str(value)
+
+    if isinstance(value, dict):
+        return {
+            k: _serialize_value(v)
+            for k, v in value.items()
+        }
+
+    if isinstance(value, list):
+        return [
+            _serialize_value(v)
+            for v in value
+        ]
+
     return value
 
-
 def _serialize_dict(data):
+
     if not data:
         return data
-    return {k: _serialize_value(v) for k, v in data.items()}
 
+    return {
+        k: _serialize_value(v)
+        for k, v in data.items()
+    }
 
 # =====================================================
 # REGISTER LISTENERS

@@ -7,6 +7,7 @@ from uuid import UUID as PyUUID
 from datetime import datetime
 from sqlalchemy.sql import func
 from core.database import Base
+from decimal import Decimal
 
 # Forward references for type hints
 from typing import TYPE_CHECKING
@@ -37,12 +38,12 @@ class Expense(Base):
 
     title: Mapped[str] = mapped_column(Text, nullable=False)
 
-    amount: Mapped[float] = mapped_column(
+    amount: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),   # financial precision
         nullable=False
     )
 
-    expense_date: Mapped[datetime] = mapped_column(
+    expense_date: Mapped[Date] = mapped_column(
         Date,
         nullable=False
     )

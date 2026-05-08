@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .user_model import User
     from .category import Category
-    from .sale import Sale
+    # from .sale import Sale
+    from .sale_item import SaleItem
 
 
 class Product(Base):
@@ -92,7 +93,12 @@ class Product(Base):
         lazy="selectin"
     )
 
-    sales: Mapped[List["Sale"]] = relationship(
+    # sales: Mapped[List["Sale"]] = relationship(
+    #     back_populates="product",
+    #     lazy="selectin"
+    # )
+
+    sale_items: Mapped[List["SaleItem"]] = relationship(
         back_populates="product",
         lazy="selectin"
     )

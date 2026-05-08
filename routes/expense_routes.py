@@ -9,14 +9,16 @@ from models.user_model import User
 from schema.expense import (
     ExpenseCreate,
     ExpenseUpdate,
-    ExpenseResponse
+    ExpenseResponse,
+    ExpenseFilter
 )
 from services.expense_service import (
     create_expense,
     get_expenses,
     get_expense,
     update_expense,
-    delete_expense
+    delete_expense,
+    get_expenses_with_filters
 )
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
@@ -123,3 +125,19 @@ def delete_expense_endpoint(
         raise HTTPException(status_code=404, detail="Expense not found")
 
     return
+
+
+@router.post(
+    "/filter",
+    response_model=List[ExpenseResponse]
+)
+def filter_expenses(
+    filters: ExpenseFilter,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_expenses_with_filters(
+        db=db,
+        user_id=current_user.id,
+        filters=filters
+    )

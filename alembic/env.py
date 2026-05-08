@@ -13,16 +13,18 @@ from core.config import settings
 
 # 🔹 Import Base and models
 from core.database import Base
-import models.user_model
-import models.team
-import models.job
-import models.category
-import models.product
-import models.sale
-import models.payment
 import models.audit_log
+import models.category
 import models.expense
-import models.password_reset_otp
+import models.job
+import models.otp_model
+import models.payment
+import models.product
+import models.sale_item
+import models.sale
+import models.team
+import models.user_model
+
 
 # 🔹 Alembic config
 config = context.config

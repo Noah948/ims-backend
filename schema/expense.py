@@ -25,9 +25,8 @@ class ExpenseCreate(ExpenseBase):
     pass
 
 
-# ================================
-# Update Schema
-# ================================
+# ===============Update Schema=================pdate Schema
+
 
 class ExpenseUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=255)
@@ -37,9 +36,7 @@ class ExpenseUpdate(BaseModel):
     is_recurring: Optional[bool] = None
 
 
-# ================================
-# Response Schema
-# ================================
+# ===============Response Schema=================
 
 class ExpenseResponse(ExpenseBase):
     id: UUID
@@ -48,3 +45,23 @@ class ExpenseResponse(ExpenseBase):
     deleted_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+# ------------ Filters ------------
+
+class DateFilter(BaseModel):
+    from_date: Optional[date] = Field(None, alias="from")
+    to_date: Optional[date] = Field(None, alias="to")
+
+
+class AmountFilter(BaseModel):
+    min: Optional[Decimal] = None
+    max: Optional[Decimal] = None
+
+
+class ExpenseFilter(BaseModel):
+    date: Optional[DateFilter] = None
+    amount: Optional[AmountFilter] = None
+    is_recurring: Optional[bool] = None
+    search: Optional[str] = None  # title search
+
+    model_config = ConfigDict(populate_by_name=True)

@@ -2,7 +2,19 @@ from pydantic import BaseModel, Field, field_validator
 from uuid import UUID
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import List
+
+
+# =====================================================
+# Sale Item Create
+# =====================================================
+
+class SaleItemCreate(BaseModel):
+    product_id: UUID
+
+    quantity: int = Field(..., gt=0)
+
+    selling_price: Decimal = Field(..., gt=0)
 
 
 # =====================================================
@@ -10,11 +22,9 @@ from typing import Optional
 # =====================================================
 
 class SaleCreate(BaseModel):
-    product_id: UUID
-    quantity: int = Field(..., gt=0)
-    selling_price: Decimal = Field(..., gt=0)
-
     contact: str
+
+    items: List[SaleItemCreate]
 
     @field_validator("contact")
     @classmethod
@@ -31,19 +41,51 @@ class SaleCreate(BaseModel):
 
 
 # =====================================================
-# Public Response
+# Sale Item Response
+# =====================================================
+
+class SaleItemResponse(BaseModel):
+    id: UUID
+
+    product_id: UUID
+
+    quantity: int
+
+    returned_quantity: int
+
+    is_fully_returned: bool
+
+    selling_price: Decimal
+
+    cost_price: Decimal
+
+    profit_loss: Decimal
+
+    class Config:
+        from_attributes = True
+
+
+# =====================================================
+# Sale Response
 # =====================================================
 
 class SaleResponse(BaseModel):
     id: UUID
-    product_id: UUID
-
-    quantity: int
-    selling_price: Decimal
-    profit_loss: Decimal
 
     contact: str
+
+    total_amount: Decimal
+
+    total_profit: Decimal
+
     created_at: datetime
+
+    items: List[SaleItemResponse]
 
     class Config:
         from_attributes = True
+
+
+# ________ Return Sale Item ________
+class SaleItemReturn(BaseModel):
+    quantity: int = Field(..., gt=0)
