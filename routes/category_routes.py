@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Dict
+from typing import List
 from uuid import UUID
 
 from core.database import get_db
@@ -10,9 +10,13 @@ from schema.category import (
     CategoryCreate,
     CategoryUpdate,
     CategoryResponse,
+
     CategoryFieldCreate,
     CategoryFieldUpdate,
-    CategoryFieldResponse
+    CategoryFieldResponse,
+
+    # ✅ NEW
+    CategoryFieldReorder
 )
 
 from services.category_service import (
@@ -22,7 +26,6 @@ from services.category_service import (
     update_category,
     delete_category,
 
-    # 🔥 field services
     add_category_field,
     update_category_field,
     delete_category_field,
@@ -31,12 +34,15 @@ from services.category_service import (
 
 from models.user_model import User
 
-router = APIRouter(prefix="/categories", tags=["Categories"])
+router = APIRouter(
+    prefix="/categories",
+    tags=["Categories"]
+)
 
 
-# =========================
+# =====================================================
 # CATEGORY ROUTES
-# =========================
+# =====================================================
 
 @router.post(
     "/",
@@ -48,7 +54,12 @@ def create_category_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return create_category(db=db, user_id=str(current_user.id), data=data)
+
+    return create_category(
+        db=db,
+        user_id=str(current_user.id),
+        data=data
+    )
 
 
 @router.get(
@@ -59,7 +70,11 @@ def list_categories(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return get_categories(db, user_id=str(current_user.id))
+
+    return get_categories(
+        db=db,
+        user_id=str(current_user.id)
+    )
 
 
 @router.get(
@@ -71,14 +86,18 @@ def retrieve_category(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+
     category = get_category(
-        db,
+        db=db,
         user_id=str(current_user.id),
         category_id=str(category_id)
     )
 
     if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Category not found"
+        )
 
     return category
 
@@ -93,6 +112,7 @@ def update_category_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+
     category = update_category(
         db=db,
         user_id=str(current_user.id),
@@ -101,7 +121,10 @@ def update_category_endpoint(
     )
 
     if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Category not found"
+        )
 
     return category
 
@@ -115,6 +138,7 @@ def delete_category_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+
     deleted = delete_category(
         db=db,
         user_id=str(current_user.id),
@@ -122,13 +146,16 @@ def delete_category_endpoint(
     )
 
     if not deleted:
-        raise HTTPException(status_code=404, detail="Category not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Category not found"
+        )
 
     return
 
 
 # =====================================================
-# 🔥 FIELD ROUTES (NEW)
+# FIELD ROUTES
 # =====================================================
 
 # ---------------- ADD FIELD ----------------
@@ -143,7 +170,9 @@ def add_field_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+
     try:
+
         field = add_category_field(
             db=db,
             user_id=str(current_user.id),
@@ -152,12 +181,19 @@ def add_field_endpoint(
         )
 
         if not field:
-            raise HTTPException(status_code=404, detail="Category not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Category not found"
+            )
 
         return field
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
 
 
 # ---------------- UPDATE FIELD ----------------
@@ -172,7 +208,9 @@ def update_field_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+
     try:
+
         field = update_category_field(
             db=db,
             user_id=str(current_user.id),
@@ -182,12 +220,19 @@ def update_field_endpoint(
         )
 
         if not field:
-            raise HTTPException(status_code=404, detail="Field or category not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Field or category not found"
+            )
 
         return field
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
 
 
 # ---------------- DELETE FIELD ----------------
@@ -201,6 +246,7 @@ def delete_field_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+
     deleted = delete_category_field(
         db=db,
         user_id=str(current_user.id),
@@ -209,7 +255,10 @@ def delete_field_endpoint(
     )
 
     if not deleted:
-        raise HTTPException(status_code=404, detail="Field or category not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Field or category not found"
+        )
 
     return
 
@@ -221,18 +270,31 @@ def delete_field_endpoint(
 )
 def reorder_fields_endpoint(
     category_id: UUID,
-    order_map: Dict[str, int],
+    payload: CategoryFieldReorder,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    fields = reorder_category_fields(
-        db=db,
-        user_id=str(current_user.id),
-        category_id=str(category_id),
-        order_map=order_map
-    )
 
-    if fields is None:
-        raise HTTPException(status_code=404, detail="Category not found")
+    try:
 
-    return fields
+        fields = reorder_category_fields(
+            db=db,
+            user_id=str(current_user.id),
+            category_id=str(category_id),
+            ordered_field_ids=payload.ordered_field_ids
+        )
+
+        if fields is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Category not found"
+            )
+
+        return fields
+
+    except ValueError as e:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )

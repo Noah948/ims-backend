@@ -3,63 +3,143 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional, List, Literal, Dict, Any
 
-FieldType = Literal["text", "number", "date"]
+
+# =========================================================
+# FIELD TYPES
+# =========================================================
+
+FieldType = Literal[
+    "text",
+    "number",
+    "date"
+]
 
 
-# =========================
-# 🔹 Field Schemas
-# =========================
+# =========================================================
+# FIELD SCHEMAS
+# =========================================================
 
 class CategoryFieldBase(BaseModel):
-    key: str = Field(..., min_length=2, max_length=100)
+
+    key: str = Field(
+        ...,
+        min_length=2,
+        max_length=100
+    )
+
     type: FieldType
-    order: int = Field(..., ge=0)
+
+    # Optional because backend auto-manages order now
+    order: Optional[int] = Field(
+        default=None,
+        ge=1
+    )
+
     required: Optional[bool] = False
-    meta: Optional[Dict[str, Any]] = None
+
+    meta: Optional[Dict[str, Any]] = {}
 
 
-# ✅ Used when creating a field (NO id)
+# =========================================================
+# CREATE FIELD
+# =========================================================
+
 class CategoryFieldCreate(CategoryFieldBase):
     pass
 
 
-# ✅ Used in responses (WITH id)
+# =========================================================
+# FIELD RESPONSE
+# =========================================================
+
 class CategoryFieldResponse(CategoryFieldBase):
+
     id: UUID
 
 
-# ✅ Used when updating a field (partial update)
+# =========================================================
+# UPDATE FIELD
+# =========================================================
+
 class CategoryFieldUpdate(BaseModel):
-    key: Optional[str] = Field(None, min_length=2, max_length=100)
+
+    key: Optional[str] = Field(
+        None,
+        min_length=2,
+        max_length=100
+    )
+
     type: Optional[FieldType] = None
-    order: Optional[int] = Field(None, ge=0)
+
+    # Optional manual order update if needed
+    order: Optional[int] = Field(
+        None,
+        ge=1
+    )
+
     required: Optional[bool] = None
+
     meta: Optional[Dict[str, Any]] = None
 
 
-# =========================
-# 🔹 Category Schemas
-# =========================
+# =========================================================
+# REORDER FIELDS
+# =========================================================
+
+class CategoryFieldReorder(BaseModel):
+
+    ordered_field_ids: List[str]
+
+
+# =========================================================
+# CATEGORY BASE
+# =========================================================
 
 class CategoryBase(BaseModel):
-    name: str = Field(..., min_length=2, max_length=100)
 
+    name: str = Field(
+        ...,
+        min_length=2,
+        max_length=100
+    )
+
+
+# =========================================================
+# CREATE CATEGORY
+# =========================================================
 
 class CategoryCreate(CategoryBase):
-    fields: Optional[List[CategoryFieldCreate]] = None
 
+    fields: Optional[List[CategoryFieldCreate]] = []
+
+
+# =========================================================
+# UPDATE CATEGORY
+# =========================================================
 
 class CategoryUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=2, max_length=100)
-    # ❌ We REMOVE direct fields update here
-    # Fields should be handled via dedicated routes
 
+    name: Optional[str] = Field(
+        None,
+        min_length=2,
+        max_length=100
+    )
+
+
+# =========================================================
+# CATEGORY RESPONSE
+# =========================================================
 
 class CategoryResponse(BaseModel):
+
     id: UUID
+
     name: str
-    fields: Optional[List[CategoryFieldResponse]]
+
+    fields: Optional[List[CategoryFieldResponse]] = []
+
     created_at: datetime
+
     updated_at: Optional[datetime]
 
     class Config:

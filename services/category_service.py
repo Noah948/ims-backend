@@ -1,8 +1,6 @@
-from unicodedata import category
-
 from sqlalchemy.orm import Session
 from uuid import uuid4
-from typing import Dict
+from typing import List
 
 from models.category import Category
 from models.product import Product
@@ -18,15 +16,24 @@ from schema.category import (
 from utils.category_del_inventory import get_category_stock_impact
 
 
-# ---------------- CREATE CATEGORY ----------------
-def create_category(db: Session, user_id: str, data: CategoryCreate) -> Category:
+# =========================================================
+# CREATE CATEGORY
+# =========================================================
+def create_category(
+    db: Session,
+    user_id: str,
+    data: CategoryCreate
+) -> Category:
+
     fields = []
 
     if data.fields:
         for index, field in enumerate(data.fields, start=1):
             field_dict = field.model_dump()
-            field_dict["id"] = str(uuid4())  # ✅ unique ID
+
+            field_dict["id"] = str(uuid4())
             field_dict["order"] = index
+
             fields.append(field_dict)
 
     category = Category(
@@ -39,38 +46,67 @@ def create_category(db: Session, user_id: str, data: CategoryCreate) -> Category
     db.add(category)
     db.commit()
     db.refresh(category)
+
     return category
 
 
-# ---------------- READ ALL ----------------
-def get_categories(db: Session, user_id: str):
+# =========================================================
+# GET ALL CATEGORIES
+# =========================================================
+def get_categories(
+    db: Session,
+    user_id: str
+):
+
     categories = db.query(Category).filter(
-        Category.user_id == user_id,
+        Category.user_id == user_id
     ).all()
 
     for category in categories:
         if category.fields:
-            category.fields = sorted(category.fields, key=lambda x: x.get("order", 0))
+            category.fields = sorted(
+                category.fields,
+                key=lambda x: x.get("order", 0)
+            )
 
     return categories
 
 
-# ---------------- READ SINGLE ----------------
-def get_category(db: Session, user_id: str, category_id: str):
+# =========================================================
+# GET SINGLE CATEGORY
+# =========================================================
+def get_category(
+    db: Session,
+    user_id: str,
+    category_id: str
+):
+
     category = db.query(Category).filter(
         Category.id == category_id,
-        Category.user_id == user_id,
+        Category.user_id == user_id
     ).first()
 
     if category and category.fields:
-        category.fields = sorted(category.fields, key=lambda x: x.get("order", 0))
+        category.fields = sorted(
+            category.fields,
+            key=lambda x: x.get("order", 0)
+        )
 
     return category
 
 
-# ---------------- UPDATE CATEGORY ----------------
-def update_category(db: Session, user_id: str, category_id: str, data: CategoryUpdate):
+# =========================================================
+# UPDATE CATEGORY
+# =========================================================
+def update_category(
+    db: Session,
+    user_id: str,
+    category_id: str,
+    data: CategoryUpdate
+):
+
     category = get_category(db, user_id, category_id)
+
     if not category:
         return None
 
@@ -81,46 +117,54 @@ def update_category(db: Session, user_id: str, category_id: str, data: CategoryU
 
     db.commit()
     db.refresh(category)
+
     return category
 
 
 # =========================================================
-# 🔥 FIELD OPERATIONS (THIS IS THE MAIN UPGRADE)
+# ADD CATEGORY FIELD
 # =========================================================
+def add_category_field(
+    db: Session,
+    user_id: str,
+    category_id: str,
+    data: CategoryFieldCreate
+):
 
-# ---------------- ADD FIELD ----------------
-def add_category_field(db: Session, user_id: str, category_id: str, data: CategoryFieldCreate):
     category = get_category(db, user_id, category_id)
+
     if not category:
         return None
 
     if not category.fields:
         category.fields = []
 
-    # ✅ prevent duplicate key
+    # Prevent duplicate key
     if any(f["key"] == data.key for f in category.fields):
-        raise ValueError(f"Field with key '{data.key}' already exists")
-
-    max_order = max([f.get("order", 0) for f in category.fields], default=0)
+        raise ValueError(
+            f"Field with key '{data.key}' already exists"
+        )
 
     new_field = {
         "id": str(uuid4()),
         "key": data.key,
         "type": data.type,
-        "required": data.required if hasattr(data, "required") else False,
-        "order": data.order if data.order is not None else max_order + 1,
-        "meta": data.meta if hasattr(data, "meta") else {}
+        "required": getattr(data, "required", False),
+        "order": len(category.fields) + 1,
+        "meta": getattr(data, "meta", {})
     }
 
     category.fields.append(new_field)
-    category.fields = sorted(category.fields, key=lambda x: x["order"])
 
     db.commit()
     db.refresh(category)
+
     return new_field
 
 
-# ---------------- UPDATE FIELD ----------------
+# =========================================================
+# UPDATE CATEGORY FIELD
+# =========================================================
 def update_category_field(
     db: Session,
     user_id: str,
@@ -128,7 +172,9 @@ def update_category_field(
     field_id: str,
     data: CategoryFieldUpdate
 ):
+
     category = get_category(db, user_id, category_id)
+
     if not category or not category.fields:
         return None
 
@@ -138,29 +184,36 @@ def update_category_field(
     updated_field = None
 
     for field in category.fields:
+
         if field["id"] == field_id:
-            # ❌ prevent ID overwrite
+
             updates.pop("id", None)
 
-            # ✅ prevent duplicate key
+            # Prevent duplicate key
             if "key" in updates:
-                if any(f["key"] == updates["key"] and f["id"] != field_id for f in category.fields):
-                    raise ValueError(f"Field with key '{updates['key']}' already exists")
+                if any(
+                    f["key"] == updates["key"]
+                    and f["id"] != field_id
+                    for f in category.fields
+                ):
+                    raise ValueError(
+                        f"Field with key '{updates['key']}' already exists"
+                    )
 
-            updated_field = {**field, **updates}  # 🔥 create new dict
+            updated_field = {
+                **field,
+                **updates
+            }
+
             new_fields.append(updated_field)
+
         else:
             new_fields.append(field)
 
     if not updated_field:
         return None
 
-    # 🔥 assign completely new list (THIS is what works reliably)
     category.fields = new_fields
-
-    # optional: sort
-    if "order" in updates and category.fields:
-        category.fields.sort(key=lambda x: x["order"])
 
     db.commit()
     db.refresh(category)
@@ -168,48 +221,77 @@ def update_category_field(
     return updated_field
 
 
-# ---------------- DELETE FIELD ----------------
-def delete_category_field(db: Session, user_id: str, category_id: str, field_id: str):
+# =========================================================
+# DELETE CATEGORY FIELD
+# =========================================================
+def delete_category_field(
+    db: Session,
+    user_id: str,
+    category_id: str,
+    field_id: str
+):
+
     category = get_category(db, user_id, category_id)
+
     if not category or not category.fields:
         return False
 
-    original_len = len(category.fields)
+    new_fields = [
+        field for field in category.fields
+        if field["id"] != field_id
+    ]
 
-    new_fields = [f for f in category.fields if f["id"] != field_id]
-
-    # normalize order
-    for index, field in enumerate(sorted(new_fields, key=lambda x: x["order"]), start=1):
+    # Normalize order
+    for index, field in enumerate(new_fields, start=1):
         field["order"] = index
 
     category.fields = new_fields
 
     db.commit()
+    db.refresh(category)
 
-    return len(category.fields or []) != original_len
+    return True
 
 
-# ---------------- REORDER FIELDS ----------------
+# =========================================================
+# REORDER CATEGORY FIELDS
+# =========================================================
 def reorder_category_fields(
     db: Session,
     user_id: str,
     category_id: str,
-    order_map: Dict[str, int]
+    ordered_field_ids: List[str]
 ):
+
     category = get_category(db, user_id, category_id)
+
     if not category or not category.fields:
         return None
 
+    existing_fields = {
+        field["id"]: field
+        for field in category.fields
+    }
+
+    # Validate IDs
+    if set(ordered_field_ids) != set(existing_fields.keys()):
+        raise ValueError("Field IDs mismatch")
+
     new_fields = []
 
-    for field in category.fields:
-        if field["id"] in order_map:
-            updated = {**field, "order": order_map[field["id"]]}
-            new_fields.append(updated)
-        else:
-            new_fields.append(field)
+    # Assign fresh order
+    for index, field_id in enumerate(ordered_field_ids, start=1):
 
-    category.fields = sorted(new_fields, key=lambda x: x["order"])
+        field = existing_fields[field_id]
+
+        updated_field = {
+            **field,
+            "order": index
+        }
+
+        new_fields.append(updated_field)
+
+    category.fields = new_fields
 
     db.commit()
     db.refresh(category)
@@ -217,8 +299,14 @@ def reorder_category_fields(
     return category.fields
 
 
-# ---------------- DELETE CATEGORY ----------------
-def delete_category(db: Session, category_id: str, user_id: str):
+# =========================================================
+# DELETE CATEGORY
+# =========================================================
+def delete_category(
+    db: Session,
+    category_id: str,
+    user_id: str
+):
 
     category = db.query(Category).filter(
         Category.id == category_id,
@@ -229,16 +317,29 @@ def delete_category(db: Session, category_id: str, user_id: str):
         return None
 
     try:
-        impact = get_category_stock_impact(db, category_id, user_id)
+
+        impact = get_category_stock_impact(
+            db,
+            category_id,
+            user_id
+        )
+
         if impact is None:
             impact = (0, 0, 0)
 
         total_stock, out_count, low_count = impact
 
-        db.query(User).filter(User.id == user_id).update({
-            User.total_products: User.total_products - total_stock,
-            User.out_of_stock_count: User.out_of_stock_count - out_count,
-            User.low_stock_count: User.low_stock_count - low_count,
+        db.query(User).filter(
+            User.id == user_id
+        ).update({
+            User.total_products:
+                User.total_products - total_stock,
+
+            User.out_of_stock_count:
+                User.out_of_stock_count - out_count,
+
+            User.low_stock_count:
+                User.low_stock_count - low_count,
         })
 
         db.query(Product).filter(
@@ -247,6 +348,7 @@ def delete_category(db: Session, category_id: str, user_id: str):
         ).delete(synchronize_session=False)
 
         db.delete(category)
+
         db.commit()
 
         return True

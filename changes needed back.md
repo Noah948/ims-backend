@@ -1,4 +1,4 @@
-1. fields must be editable in category
+
 2. in job -
    email should be unique, we can create a metadata file that will have all emails for easy lookup in entire DB
 8. no use of fetching single product, but let it be there 
@@ -14,4 +14,4 @@
 22. in categories: number string conversion, date cannot change, select option will be removed. 
 23. work on category ordering
 
-Abdullah: 1
+Abdullah: 
