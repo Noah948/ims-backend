@@ -195,7 +195,43 @@ def add_field_endpoint(
             detail=str(e)
         )
 
+# ---------------- REORDER FIELDS ----------------
+@router.patch(
+    "/{category_id}/fields/reorder",
+    response_model=List[CategoryFieldResponse]
+)
+def reorder_fields_endpoint(
+    category_id: UUID,
+    payload: CategoryFieldReorder,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
 
+    try:
+
+        fields = reorder_category_fields(
+            db=db,
+            user_id=str(current_user.id),
+            category_id=str(category_id),
+            ordered_field_ids=payload.ordered_field_ids
+        )
+
+        if fields is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Category not found"
+            )
+
+        return fields
+
+    except ValueError as e:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+    
+    
 # ---------------- UPDATE FIELD ----------------
 @router.patch(
     "/{category_id}/fields/{field_id}",
@@ -263,38 +299,4 @@ def delete_field_endpoint(
     return
 
 
-# ---------------- REORDER FIELDS ----------------
-@router.patch(
-    "/{category_id}/fields/reorder",
-    response_model=List[CategoryFieldResponse]
-)
-def reorder_fields_endpoint(
-    category_id: UUID,
-    payload: CategoryFieldReorder,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
 
-    try:
-
-        fields = reorder_category_fields(
-            db=db,
-            user_id=str(current_user.id),
-            category_id=str(category_id),
-            ordered_field_ids=payload.ordered_field_ids
-        )
-
-        if fields is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Category not found"
-            )
-
-        return fields
-
-    except ValueError as e:
-
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        )
