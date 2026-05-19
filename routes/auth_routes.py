@@ -3,15 +3,32 @@ from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.dependencies import get_current_user
-from services.auth_service import register_user
+
+from services.auth_service import (
+    register_user,
+    verify_email_token
+)
+
 from utils.auth import authenticate_user
-from schema.user import UserCreate, UserResponse, UserLogin
 
-router = APIRouter(prefix="/auth", tags=["Auth"])
+from schema.user import (
+    UserCreate,
+    UserResponse,
+    UserLogin
+)
+
+router = APIRouter(
+    prefix="/auth",
+    tags=["Auth"]
+)
 
 
+# =====================================================
 # REGISTER
-@router.post("/register", response_model=UserResponse)
+# NOW SENDS VERIFICATION EMAIL
+# =====================================================
+
+@router.post("/register")
 def register(
     data: UserCreate,
     db: Session = Depends(get_db),
@@ -19,7 +36,25 @@ def register(
     return register_user(db, data)
 
 
+# =====================================================
+# VERIFY EMAIL
+# =====================================================
+
+@router.get("/verify-email")
+def verify_email(
+    token: str,
+    db: Session = Depends(get_db)
+):
+    return verify_email_token(
+        db=db,
+        token=token
+    )
+
+
+# =====================================================
 # LOGIN (JSON BASED)
+# =====================================================
+
 @router.post("/login")
 def login(
     data: UserLogin,
@@ -32,7 +67,10 @@ def login(
     )
 
 
+# =====================================================
 # CURRENT USER
+# =====================================================
+
 @router.get("/me", response_model=UserResponse)
 def me(user=Depends(get_current_user)):
     return user
