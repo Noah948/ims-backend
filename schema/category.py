@@ -37,7 +37,7 @@ class CategoryFieldBase(BaseModel):
 
     required: Optional[bool] = False
 
-    meta: Optional[Dict[str, Any]] = {}
+    meta: Dict[str, Any] = Field(default_factory=dict)
 
 
 # =========================================================
@@ -110,7 +110,9 @@ class CategoryBase(BaseModel):
 
 class CategoryCreate(CategoryBase):
 
-    fields: Optional[List[CategoryFieldCreate]] = []
+    fields: List[CategoryFieldCreate] = Field(
+        default_factory=list
+    )
 
 
 # =========================================================
@@ -136,11 +138,15 @@ class CategoryResponse(BaseModel):
 
     name: str
 
-    fields: Optional[List[CategoryFieldResponse]] = []
+    fields: List[CategoryFieldResponse] = Field(
+        default_factory=list
+    )
 
     created_at: datetime
 
     updated_at: Optional[datetime]
+
+    deleted_at: Optional[datetime]
 
     class Config:
         from_attributes = True

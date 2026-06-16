@@ -31,18 +31,19 @@ class Category(Base):
         index=True
     )
 
-    name: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str] = mapped_column(
+        Text,
+        nullable=False
+    )
 
-    # ✅ Structured JSONB field
     # Expected format:
     # [
     #   {
-    #       "id": "uuid",          # unique identifier (used in routes)
-    #       "key": "color",        # unique per category
+    #       "id": "uuid",
+    #       "key": "color",
     #       "type": "string",
     #       "required": True,
-    #       "order": 1,            # controls ordering (NOT array index)
-    #       "meta": {}             # optional extensible data
+    #       "order": 1
     #   }
     # ]
     fields: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
@@ -62,6 +63,12 @@ class Category(Base):
         onupdate=func.now()
     )
 
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP,
+        nullable=True,
+        index=True
+    )
+
     user: Mapped["User"] = relationship(
         back_populates="categories",
         lazy="selectin"
@@ -69,12 +76,11 @@ class Category(Base):
 
     products: Mapped[List["Product"]] = relationship(
         back_populates="category",
-        lazy="selectin",
-        cascade="all, delete-orphan"
+        lazy="selectin"
     )
 
     # =========================
-    # 🔹 Minimal Helper Methods
+    # Field Helpers
     # =========================
 
     def ensure_fields(self) -> None:
@@ -86,4 +92,8 @@ class Category(Base):
         """Safely retrieve a field by ID"""
         if not self.fields:
             return None
-        return next((f for f in self.fields if f.get("id") == field_id), None)
+
+        return next(
+            (f for f in self.fields if f.get("id") == field_id),
+            None
+        )

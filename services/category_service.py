@@ -1,6 +1,8 @@
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import uuid4
 from typing import List
+from datetime import datetime
 
 from models.category import Category
 from models.product import Product
@@ -59,7 +61,8 @@ def get_categories(
 ):
 
     categories = db.query(Category).filter(
-        Category.user_id == user_id
+        Category.user_id == user_id,
+        Category.deleted_at.is_(None)
     ).all()
 
     for category in categories:
@@ -83,7 +86,8 @@ def get_category(
 
     category = db.query(Category).filter(
         Category.id == category_id,
-        Category.user_id == user_id
+        Category.user_id == user_id,
+        Category.deleted_at.is_(None)
     ).first()
 
     if category and category.fields:
@@ -310,46 +314,29 @@ def delete_category(
 
     category = db.query(Category).filter(
         Category.id == category_id,
-        Category.user_id == user_id
+        Category.user_id == user_id,
+        Category.deleted_at.is_(None)
     ).first()
 
     if not category:
         return None
 
+    active_product_exists = db.query(Product.id).filter(
+        Product.category_id == category_id,
+        Product.user_id == user_id,
+        Product.deleted_at.is_(None)
+    ).first()
+
+    if active_product_exists:
+        raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Cannot delete category. Delete all products in this category first."
+    )
     try:
-
-        impact = get_category_stock_impact(
-            db,
-            category_id,
-            user_id
-        )
-
-        if impact is None:
-            impact = (0, 0, 0)
-
-        total_stock, out_count, low_count = impact
-
-        db.query(User).filter(
-            User.id == user_id
-        ).update({
-            User.total_products:
-                User.total_products - total_stock,
-
-            User.out_of_stock_count:
-                User.out_of_stock_count - out_count,
-
-            User.low_stock_count:
-                User.low_stock_count - low_count,
-        })
-
-        db.query(Product).filter(
-            Product.category_id == category_id,
-            Product.user_id == user_id
-        ).delete(synchronize_session=False)
-
-        db.delete(category)
+        category.deleted_at = datetime.utcnow()
 
         db.commit()
+        db.refresh(category)
 
         return True
 
