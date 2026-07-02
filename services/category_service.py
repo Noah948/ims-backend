@@ -18,6 +18,22 @@ from schema.category import (
 from utils.category_del_inventory import get_category_stock_impact
 
 
+# helper
+def normalize_fields(fields):
+    if not fields:
+        return []
+
+    normalized = []
+
+    for index, field in enumerate(fields, start=1):
+        normalized.append({
+            **field,
+            "meta": field.get("meta") or {},
+            "required": field.get("required", False),
+            "order": field.get("order", index),
+        })
+
+    return sorted(normalized, key=lambda x: x["order"])
 # =========================================================
 # CREATE CATEGORY
 # =========================================================
@@ -61,16 +77,12 @@ def get_categories(
 ):
 
     categories = db.query(Category).filter(
-        Category.user_id == user_id,
-        Category.deleted_at.is_(None)
+    Category.user_id == user_id,
+    Category.deleted_at.is_(None)
     ).all()
 
     for category in categories:
-        if category.fields:
-            category.fields = sorted(
-                category.fields,
-                key=lambda x: x.get("order", 0)
-            )
+        category.fields = normalize_fields(category.fields)
 
     return categories
 
@@ -91,10 +103,7 @@ def get_category(
     ).first()
 
     if category and category.fields:
-        category.fields = sorted(
-            category.fields,
-            key=lambda x: x.get("order", 0)
-        )
+        category.fields = normalize_fields(category.fields)
 
     return category
 

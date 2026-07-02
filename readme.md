@@ -1,7 +1,7 @@
 # Commands
 
 venv\Scripts\activate
-
+uvicorn main:app --reload
 
 # TODO
 
