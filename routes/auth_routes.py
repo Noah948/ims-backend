@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from services.rate_limiter.dependency import rate_limit
+from services.rate_limiter.policies import AuthRateLimits
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from core.database import get_db
@@ -28,7 +30,7 @@ router = APIRouter(
 # NOW SENDS VERIFICATION EMAIL
 # =====================================================
 
-@router.post("/register")
+@router.post("/register", dependencies=[Depends(rate_limit(AuthRateLimits.REGISTER))])
 def register(
     data: UserCreate,
     db: Session = Depends(get_db),
@@ -55,8 +57,9 @@ def verify_email(
 # LOGIN (JSON BASED)
 # =====================================================
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(rate_limit(AuthRateLimits.LOGIN))])
 def login(
+    request: Request,
     data: UserLogin,
     db: Session = Depends(get_db),
 ):

@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from core.database import Base, engine
 from core.config import settings
+from core.redis import redis_client
 from models import *
 
 from routes.auth_routes import router as auth_router
@@ -27,6 +28,11 @@ app = FastAPI(
     docs_url="/",
     redoc_url="/redoc",
 )
+
+@app.on_event("startup")
+def startup():
+    redis_client.ping()
+    print("✅ Connected to Redis")
 
 # ✅ CORS CONFIGURATION
 app.add_middleware(

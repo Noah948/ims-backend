@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from services.rate_limiter.dependency import rate_limit
+from services.rate_limiter.policies import AuthRateLimits
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -12,11 +14,6 @@ from schema.password_reset import (
     VerifyOTPRequest,
     ResetPasswordRequest
 )
-# from services.password_reset_service import (
-#     request_password_reset,
-#     verify_otp,
-#     reset_password
-# )
 
 from services.password_reset_service import (
     request_password_reset,
@@ -50,7 +47,7 @@ def verify_otp_endpoint(data: VerifyOTPRequest, db: Session = Depends(get_db)):
 
 
 # ---------------- RESET PASSWORD ----------------
-@router.post("/reset-password")
+@router.post("/reset-password", dependencies=[Depends(rate_limit(AuthRateLimits.RESET_PASSWORD))])
 def reset_password_endpoint(data: ResetPasswordRequest, db: Session = Depends(get_db)):
 
     success = reset_password(
