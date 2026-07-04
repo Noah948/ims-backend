@@ -29,6 +29,8 @@ class AuthRateLimits:
         key_prefix="password-reset",
     )
 
+    
+
 
 class ApiRateLimits:
     GENERAL = RateLimitPolicy(

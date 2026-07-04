@@ -47,7 +47,7 @@ def verify_otp_endpoint(data: VerifyOTPRequest, db: Session = Depends(get_db)):
 
 
 # ---------------- RESET PASSWORD ----------------
-@router.post("/reset-password", dependencies=[Depends(rate_limit(AuthRateLimits.RESET_PASSWORD))])
+@router.post("/reset-password")
 def reset_password_endpoint(data: ResetPasswordRequest, db: Session = Depends(get_db)):
 
     success = reset_password(

@@ -36,16 +36,6 @@ class Category(Base):
         nullable=False
     )
 
-    # Expected format:
-    # [
-    #   {
-    #       "id": "uuid",
-    #       "key": "color",
-    #       "type": "string",
-    #       "required": True,
-    #       "order": 1
-    #   }
-    # ]
     fields: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
         JSONB,
         nullable=True,

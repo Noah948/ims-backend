@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
 from uuid import UUID, uuid4
-from datetime import datetime
+from datetime import datetime, timedelta, UTC
+from scheduler.policies import EXPENSE_RETENTION_DAYS
 
 from models.expense import Expense
 from schema.expense import ExpenseCreate, ExpenseUpdate, ExpenseFilter
@@ -99,7 +100,7 @@ def delete_expense(db: Session, user_id: UUID, expense_id: UUID):
         if not expense:
             return None
 
-        expense.deleted_at = datetime.utcnow()
+        expense.deleted_at = datetime.now(UTC)
 
         db.commit()
         return expense
@@ -107,6 +108,21 @@ def delete_expense(db: Session, user_id: UUID, expense_id: UUID):
     except Exception:
         db.rollback()
         raise
+
+# --------------------expense cleanup--------------------
+def cleanup_deleted_expenses(db: Session):
+    cutoff = datetime.now(UTC) - timedelta(days=EXPENSE_RETENTION_DAYS)
+
+    (
+        db.query(Expense)
+        .filter(
+            Expense.deleted_at.is_not(None),
+            Expense.deleted_at < cutoff,
+        )
+        .delete(synchronize_session=False)
+    )
+
+    db.commit()
 
 # ________ FILTERS ________
 

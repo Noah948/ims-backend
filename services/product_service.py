@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, UTC
+
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from models.product import Product
@@ -7,6 +9,7 @@ from schema.product import ProductCreate, ProductUpdate
 from utils.inventory import apply_stock_change
 from sqlalchemy import select
 from utils.pagination import paginate
+from scheduler.policies import PRODUCT_RETENTION_DAYS
 
 
 # ---------------- VALIDATION HELPER ----------------
@@ -197,7 +200,7 @@ def delete_product(db: Session, user_id, product_id):
         is_delete=True,
     )
 
-    db.delete(product)
+    product.deleted_at = datetime.now(UTC)
     db.commit()
 
     return None
@@ -250,3 +253,19 @@ def decrease_product_quantity(db: Session, user_id, product_id, quantity: int):
     db.commit()
     db.refresh(product)
     return product
+
+# ---------------- CLEANUP DELETED PRODUCTS ----------------
+def cleanup_deleted_products(db: Session):
+
+    cutoff = datetime.now(UTC) - timedelta(days=PRODUCT_RETENTION_DAYS)
+
+    (
+        db.query(Product)
+        .filter(
+            Product.deleted_at.isnot(None),
+            Product.deleted_at < cutoff,
+        )
+        .delete(synchronize_session=False)
+    )
+
+    db.commit()

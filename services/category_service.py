@@ -2,7 +2,8 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import uuid4
 from typing import List
-from datetime import datetime
+from datetime import datetime, timedelta, UTC
+from scheduler.policies import CATEGORY_RETENTION_DAYS
 
 from models.category import Category
 from models.product import Product
@@ -342,7 +343,7 @@ def delete_category(
         detail="Cannot delete category. Delete all products in this category first."
     )
     try:
-        category.deleted_at = datetime.utcnow()
+        category.deleted_at = datetime.now(UTC)
 
         db.commit()
         db.refresh(category)
@@ -352,3 +353,18 @@ def delete_category(
     except Exception:
         db.rollback()
         raise
+
+# ------------------category cleanup------------------
+def cleanup_deleted_categories(db: Session):
+    cutoff = datetime.now(UTC) - timedelta(days=CATEGORY_RETENTION_DAYS)
+
+    (
+        db.query(Category)
+        .filter(
+            Category.deleted_at.is_not(None),
+            Category.deleted_at < cutoff,
+        )
+        .delete(synchronize_session=False)
+    )
+
+    db.commit()
