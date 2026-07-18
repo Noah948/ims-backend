@@ -7,23 +7,24 @@
 from core.redis import redis_client
 from .policies import RateLimitPolicy
 
+
 class RateLimiter:
 
     def is_allowed(self, identifier: str, policy: RateLimitPolicy) -> tuple[bool, int]:
 
         key = f"{policy.key_prefix}:{identifier}"
 
-        pipe = redis_client.pipeline()
+        current_requests = redis_client.incr(key)
 
-        pipe.incr(key)
-        pipe.expire(key, policy.window, nx=True)
-
-        current_requests, _ = pipe.execute()
+        # Set expiry only when this is the first request
+        if current_requests == 1:
+            redis_client.expire(key, policy.window)
 
         if current_requests > policy.limit:
             retry_after = redis_client.ttl(key)
-            return False, retry_after
+            return False, retry_after or 0
 
         return True, 0
+
 
 rate_limiter = RateLimiter()

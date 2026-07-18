@@ -20,10 +20,8 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 465
 
     # Redis settings
-    REDIS_HOST: str = ""
-    REDIS_PORT: int 
-    REDIS_DB: int 
-    REDIS_PASSWORD: str | None = None
+    UPSTASH_REDIS_REST_URL: str = ""
+    UPSTASH_REDIS_REST_TOKEN: str = ""
 
     # # Razorpay
     # RAZORPAY_KEY_ID: str = ""

@@ -6,6 +6,7 @@
 20. make multiple delete routes for features where it can be used
 22. in categories: number string conversion, date cannot change, select option will be removed. 
 21. make all queries optimized, currently all things r taking too much time. make a script to see time taken by query to run
+22. implement upload of user iamge
 
 ## Scheduler:
 11. need to make another server file for cron jobs

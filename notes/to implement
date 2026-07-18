@@ -1,0 +1,153 @@
+## 1. Complete IMS Business Lifecycle
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         IMS BUSINESS LIFECYCLE                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                           ┌──────────────────┐
+                           │   User Register  │
+                           └────────┬─────────┘
+                                    │
+                                    ▼
+                      ┌─────────────────────────┐
+                      │ Create New Business     │
+                      │ Owner Account Created   │
+                      └────────┬────────────────┘
+                               │
+                               ▼
+                    ┌────────────────────────────┐
+                    │ 30 Days Free Trial         │
+                    │                            │
+                    │ • Unlimited Features       │
+                    │ • Unlimited Categories     │
+                    │ • Unlimited Team Members   │
+                    └───────────┬────────────────┘
+                                │
+                 Trial Ends     ▼
+                    ┌────────────────────────────┐
+                    │ Payment Required           │
+                    └───────┬───────────┬────────┘
+                            │           │
+                  Payment Success     No Payment
+                            │           │
+                            ▼           ▼
+             ┌─────────────────────┐   ┌────────────────────┐
+             │ Active Subscription │   │ Grace Period       │
+             │                     │   │ (e.g. 5 Days)      │
+             └─────────┬───────────┘   └─────────┬──────────┘
+                       │                         │
+         Subscription Ends                       │
+                       │                         │
+                       └─────────────┬───────────┘
+                                     ▼
+                         ┌────────────────────────┐
+                         │ Subscription Expired   │
+                         │                        │
+                         │ ✓ Login Allowed        │
+                         │ ✗ Inventory Locked     │
+                         │ ✗ Sales Locked         │
+                         │ ✗ Categories Locked    │
+                         │ ✗ Team Locked          │
+                         │ ✓ Billing Accessible   │
+                         └───────────┬────────────┘
+                                     │
+                             User Pays Again
+                                     │
+                                     ▼
+                         ┌────────────────────────┐
+                         │ Subscription Renewed   │
+                         └────────────────────────┘
+
+
+
+                    ──────────────────────────────────────
+                          ACCOUNT DELETION FLOW
+                    ──────────────────────────────────────
+
+
+                     User Deletes Business Account
+                                  │
+                                  ▼
+                    ┌───────────────────────────────┐
+                    │ Soft Delete (2 Months)        │
+                    │                               │
+                    │ All Data Preserved            │
+                    │ Products                      │
+                    │ Sales                         │
+                    │ Expenses                      │
+                    │ Categories                    │
+                    │ Team                          │
+                    └─────────────┬─────────────────┘
+                                  │
+                 ┌────────────────┴────────────────┐
+                 │                                 │
+          Returns Within 2 Months            Doesn't Return
+                 │                                 │
+                 ▼                                 ▼
+      ┌────────────────────────┐      ┌────────────────────────┐
+      │ Payment Required       │      │ Scheduler Permanently  │
+      │                        │      │ Deletes Everything     │
+      │ Restore Old Business   │      │                        │
+      └───────────┬────────────┘      └──────────┬─────────────┘
+                  │                              │
+                  ▼                              ▼
+      ┌────────────────────────┐      ┌────────────────────────┐
+      │ Continue Existing      │      │ Future Registration    │
+      │ Business               │      │ Starts Fresh           │
+      └────────────────────────┘      │                        │
+                                      │ New Trial Starts Again │
+                                      └────────────────────────┘
+```
+
+---
+
+# 2. Pricing Plans
+
+| Feature            | Trial (30 Days) |           Basic          |            Pro           |    Dedicated / Self Hosted    |
+| ------------------ | :-------------: | :----------------------: | :----------------------: | :---------------------------: |
+| Price              |       Free      | ₹399/month *(suggested)* | ₹699/month *(suggested)* | ₹25k–₹40k Setup + Maintenance |
+| Products           |    Unlimited    |         Unlimited        |         Unlimited        |           Unlimited           |
+| Sales              |    Unlimited    |         Unlimited        |         Unlimited        |           Unlimited           |
+| Categories         |    Unlimited    |             5            |         Unlimited        |           Unlimited           |
+| Team Members       |    Unlimited    |             3            |         Unlimited        |           Unlimited           |
+| Expenses           |        ✅       |             ✅          |             ✅           |               ✅             |
+| Reports            |        ✅       |             ✅          |             ✅           |               ✅             |
+| Audit Logs         |        ✅       |             ✅          |             ✅           |               ✅             |
+| Role Based Access  |        ✅       |             ✅          |             ✅           |               ✅             |
+| Custom Branding    |        ❌       |             ❌          |             ❌           |               ✅             |
+| Dedicated Database |        ❌       |             ❌          |             ❌           |               ✅             |
+| Dedicated Backend  |        ❌       |             ❌          |             ❌           |               ✅             |
+| Priority Support   |        ❌       |             ❌          |             ❌           |               ✅             |
+| Own Deployment     |        ❌       |             ❌          |             ❌           |               ✅             |
+
+---
+
+# 3. Role Based Access Matrix
+
+| Permission               | Owner  |   Manager |  Operator|
+| ------------------------ | :---:  |   :-----: |  :-----: |
+| View Dashboard           |   ✅   |    ✅    |    ✅    |
+| Manage Subscription      |   ✅   |    ❌    |    ❌    |
+| View Billing             |   ✅   |    ❌    |    ❌    |
+| Update Business Settings |   ✅   |    ❌    |    ❌    |
+| Invite Team Members      |   ✅   |    ❌    |    ❌    |
+| Remove Team Members      |   ✅   |    ❌    |    ❌    |
+| Change User Roles        |   ✅   |    ❌    |    ❌    |
+| Create Categories        |   ✅   |    ✅    |    ❌    |
+| Edit Categories          |   ✅   |    ✅    |    ❌    |
+| Delete Categories        |   ✅   |    ✅    |    ❌    |
+| Create Products          |   ✅   |    ✅    |    ✅    |
+| Edit Products            |   ✅   |    ✅    |    ✅    |
+| Delete Products          |   ✅   |    ✅    |    ❌    |
+| Record Sales             |   ✅   |    ✅    |    ✅    |
+| Edit Sales               |   ✅   |    ✅    |    ❌    |
+| Delete Sales             |   ✅   |    ✅    |    ❌    |
+| Manage Expenses          |   ✅   |    ✅    |    ❌    |
+| View Reports             |   ✅   |    ✅    | Limited  |
+| Export Reports           |   ✅   |    ✅    |    ❌    |
+| View Audit Logs          |   ✅   |    ✅    |    ❌    |
+| Restore Deleted Items    |   ✅   |    ❌    |    ❌    |
+| Permanently Delete Data  |   ✅   |    ❌    |    ❌    |
+
+---
