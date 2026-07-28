@@ -3,6 +3,8 @@
 venv\Scripts\activate
 uvicorn main:app --reload
 
+pip freeze > requirements.txt 
+
 # TODO
 
 ## 2️⃣ Sale Table Issue ⚠️ (Important)

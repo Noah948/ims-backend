@@ -42,3 +42,5 @@ dist/
 # --- Firebase or Service Accounts ---
 firebase-adminsdk*.json
 serviceAccountKey.json
+
+graphify-out
