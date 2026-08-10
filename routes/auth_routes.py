@@ -1,63 +1,34 @@
-from services.rate_limiter.dependency import rate_limit
-from services.rate_limiter.policies import AuthRateLimits
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.dependencies import get_current_user
 
-from services.auth_service import (
-    register_user,
-    verify_email_token
-)
+from services.rate_limiter.dependency import rate_limit
+from services.rate_limiter.policies import AuthRateLimits
+
+
+from schema.user import UserResponse, UserLogin
+from schema.password_reset import ForgotPasswordRequest, VerifyOTPRequest
 
 from utils.auth import authenticate_user
-
-from schema.user import (
-    UserCreate,
-    UserResponse,
-    UserLogin
+from services.account_recovery_service import (
+    request_account_recovery,
+    recover_account,
 )
 
 router = APIRouter(
     prefix="/auth",
-    tags=["Auth"]
+    tags=["Auth"],
 )
 
 
-# =====================================================
-# REGISTER
-# NOW SENDS VERIFICATION EMAIL
-# =====================================================
-
-@router.post("/register", dependencies=[Depends(rate_limit(AuthRateLimits.REGISTER))])
-def register(
-    data: UserCreate,
-    db: Session = Depends(get_db),
-):
-    return register_user(db, data)
-
-
-# =====================================================
-# VERIFY EMAIL
-# =====================================================
-
-@router.get("/verify-email")
-def verify_email(
-    token: str,
-    db: Session = Depends(get_db)
-):
-    return verify_email_token(
-        db=db,
-        token=token
-    )
-
-
-# =====================================================
-# LOGIN (JSON BASED)
-# =====================================================
-
-@router.post("/login", dependencies=[Depends(rate_limit(AuthRateLimits.LOGIN))])
+@router.post(
+    "/login",
+    dependencies=[
+        Depends(rate_limit(AuthRateLimits.LOGIN))
+    ],
+)
 def login(
     request: Request,
     data: UserLogin,
@@ -66,14 +37,38 @@ def login(
     return authenticate_user(
         db=db,
         email=data.email,
-        password=data.password
+        password=data.password,
     )
 
 
-# =====================================================
-# CURRENT USER
-# =====================================================
+# frontend can handle the logout by simply deleting the token on the client side.
+@router.post("/logout") 
+def logout(): return { 
+    "message": "Logged out successfully" 
+    }
 
-@router.get("/me", response_model=UserResponse)
-def me(user=Depends(get_current_user)):
-    return user
+
+#  recover deleted account
+
+@router.post("/recovery/request")
+def recovery_request(
+    data: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    request_account_recovery(db, data.email)
+
+    return {
+        "message": "If the account is eligible for recovery, an OTP has been sent to the registered email."
+    }
+
+
+@router.post("/recovery/verify-otp")
+def recovery_verify_otp(
+    data: VerifyOTPRequest,
+    db: Session = Depends(get_db),
+):
+    return recover_account(
+        db=db,
+        email=data.email,
+        otp=data.otp,
+    )

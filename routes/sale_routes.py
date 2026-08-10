@@ -1,143 +1,59 @@
-from fastapi import APIRouter, Depends, status, HTTPException, Query
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
-from typing import List
 from uuid import UUID
 
 from core.database import get_db
-from core.dependencies import get_current_user
+from core.dependencies import get_current_user, get_current_business
 from models.user_model import User
+from models.business import Business
 from schema.sale import SaleCreate, SaleResponse, SaleItemReturn
-from services.sale_service import (
+from schema.common import PaginatedResponse
+
+from controllers.sale_controller import (
     create_sale,
     get_sales,
     get_sale,
-    # delete_sale,
-    return_sale_item
+    return_sale_item,
 )
-from schema.common import PaginatedResponse
 
 router = APIRouter(prefix="/sales", tags=["Sales"])
 
 
-# ---------------- CREATE ----------------
-@router.post(
-    "/",
-    response_model=SaleResponse,
-    status_code=status.HTTP_201_CREATED
-)
+@router.post("/", response_model=SaleResponse, status_code=status.HTTP_201_CREATED)
 def create_sale_endpoint(
     data: SaleCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    business: Business = Depends(get_current_business),
 ):
-    sale, error = create_sale(
-        db=db,
-        user_id=current_user.id,
-        data=data
-    )
+    return create_sale(db, business.id, current_user.id, data)
 
-    if error == "PRODUCT_NOT_FOUND":
-        raise HTTPException(status_code=404, detail="Product not found")
 
-    if error == "INSUFFICIENT_STOCK":
-        raise HTTPException(
-            status_code=400,
-            detail="Insufficient stock to complete sale"
-        )
-
-    return sale
-
-# ---------------- RETURN SALE ITEM ----------------
-@router.post(
-    "/items/{sale_item_id}/return"
-)
+@router.post("/items/{sale_item_id}/return")
 def return_sale_item_endpoint(
     sale_item_id: UUID,
     data: SaleItemReturn,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    business: Business = Depends(get_current_business),
 ):
-
-    sale_item, error = return_sale_item(
-        db=db,
-        user_id=current_user.id,
-        sale_item_id=sale_item_id,
-        quantity=data.quantity
-    )
-
-    if error == "SALE_ITEM_NOT_FOUND":
-        raise HTTPException(
-            status_code=404,
-            detail="Sale item not found"
-        )
-
-    if error == "INVALID_RETURN_QUANTITY":
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid return quantity"
-        )
-
-    return {"message": "Sale item returned successfully"}
+    return return_sale_item(db, business.id, current_user.id, sale_item_id, data)
 
 
-# ---------------- READ ALL ----------------
-@router.get(
-    "/",
-    response_model=PaginatedResponse[SaleResponse]
-)
+@router.get("/", response_model=PaginatedResponse[SaleResponse])
 def list_sales(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-    return get_sales(
-        db=db,
-        user_id=current_user.id,
-        page=page,
-        limit=limit
-    )
+    return get_sales(db, business.id, page, limit)
 
 
-# ---------------- READ SINGLE ----------------
-@router.get(
-    "/{sale_id}",
-    response_model=SaleResponse
-)
+@router.get("/{sale_id}", response_model=SaleResponse)
 def retrieve_sale(
     sale_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-    sale = get_sale(
-        db=db,
-        user_id=current_user.id,
-        sale_id=sale_id
-    )
-
-    if not sale:
-        raise HTTPException(status_code=404, detail="Sale not found")
-
-    return sale
-
-
-# ---------------- DELETE ----------------
-# @router.delete(
-#     "/{sale_id}",
-#     status_code=status.HTTP_204_NO_CONTENT
-# )
-# def delete_sale_endpoint(
-#     sale_id: UUID,
-#     db: Session = Depends(get_db),
-#     current_user: User = Depends(get_current_user)
-# ):
-#     sale = delete_sale(
-#         db=db,
-#         user_id=current_user.id,
-#         sale_id=sale_id
-#     )
-
-#     if not sale:
-#         raise HTTPException(status_code=404, detail="Sale not found")
-
-#     return
+    return get_sale(db, business.id, sale_id)

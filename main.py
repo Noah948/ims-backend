@@ -6,20 +6,22 @@ from core.config import settings
 from core.redis import redis_client
 from models import *
 
-from routes.auth_routes import router as auth_router
-from routes.category_routes import router as category_router
-from routes.product_routes import router as product_router  
-from routes.job_routes import router as job_router  
-from routes.team_routes import router as team_router  
-from routes.sale_routes import router as sale_router  
-from routes.expense_routes import router as expense_router
-from routes.audit_logs import router as audit_log_router
-from routes.password_reset_routes import router as password_reset_router
-from routes.account_routes import router as account_router
-from utils.audit_listener import register_audit_listeners
+# from routes.account_routes import router as account_router
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+from routes.auth_routes import router as auth_router
+from routes.user_routes import router as user_router
+from routes.business_routes import router as business_router
+from routes.business_member_routes import router as business_member_router
+from routes.password_reset_routes import router as password_reset_router
+# from routes.category_routes import router as category_router
+# from routes.product_routes import router as product_router
+# from routes.job_routes import router as job_router
+# from routes.sale_routes import router as sale_router
+# from routes.expense_routes import router as expense_router
+# from routes.audit_logs import router as audit_log_router
+# from utils.audit_listener import register_audit_listeners
+
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -29,12 +31,14 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+
 @app.on_event("startup")
 def startup():
+    print("connecting to redis ...")
     redis_client.ping()
-    print("✅ Connected to Redis")
+    print("Connected to Redis")
 
-# ✅ CORS CONFIGURATION
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.FRONTEND_URL],
@@ -43,20 +47,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#audit function
-register_audit_listeners()
+# register_audit_listeners()
+# app.include_router(account_router)
 
-# ✅ Routers
 app.include_router(auth_router)
-app.include_router(account_router)
+app.include_router(user_router)
 app.include_router(password_reset_router)
-app.include_router(category_router)
-app.include_router(product_router)
-app.include_router(sale_router)
-app.include_router(audit_log_router)
-app.include_router(expense_router)
-app.include_router(job_router)
-app.include_router(team_router)
+app.include_router(business_router)
+app.include_router(business_member_router)
+# app.include_router(category_router)
+# app.include_router(product_router)
+# app.include_router(sale_router)
+# app.include_router(audit_log_router)
+# app.include_router(expense_router)
+# app.include_router(job_router)
 
 
 @app.get("/", tags=["Health"])

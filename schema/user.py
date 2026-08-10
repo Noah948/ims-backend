@@ -4,28 +4,11 @@ from uuid import UUID
 from typing import Optional
 
 
-# =====================================================
-# Base Shared Schema
-# =====================================================
-
 class UserBase(BaseModel):
-    business_name: str = Field(..., min_length=2)
-    user_name: str = Field(..., min_length=2)
-
-    contact_number: Optional[str] = Field(
-        None,
-        pattern=r"^[0-9]{10}$"
-    )
-
+    full_name: str = Field(..., min_length=2)
+    contact_number: Optional[str] = Field(None, pattern=r"^[0-9]{10}$")
     avatar: Optional[str] = None
 
-    # ✅ NEW FIELD
-    location: Optional[str] = None
-
-
-# =====================================================
-# Create / Auth
-# =====================================================
 
 class UserCreate(UserBase):
     email: EmailStr
@@ -37,49 +20,21 @@ class UserLogin(BaseModel):
     password: str
 
 
-# =====================================================
-# Update Profile
-# =====================================================
-
 class UserUpdate(BaseModel):
-    business_name: Optional[str] = Field(None, min_length=2)
-    user_name: Optional[str] = Field(None, min_length=2)
-
-    contact_number: Optional[str] = Field(
-        None,
-        pattern=r"^[0-9]{10}$"
-    )
-
+    full_name: Optional[str] = Field(None, min_length=2)
+    contact_number: Optional[str] = Field(None, pattern=r"^[0-9]{10}$")
     avatar: Optional[str] = None
 
-    # ✅ NEW FIELD (important for updating later)
-    location: Optional[str] = None
-
-
-# =====================================================
-# Public Response
-# =====================================================
 
 class UserResponse(BaseModel):
     id: UUID
-
-    business_name: str
-    user_name: str
+    full_name: str
     email: EmailStr
-
     contact_number: Optional[str]
     avatar: Optional[str]
-
-    # ✅ NEW FIELD (so frontend can use it)
-    location: Optional[str]
-
-    subscription_start_date: Optional[datetime]
-    subscription_end_date: Optional[datetime]
-
-    total_products: int
-    out_of_stock_count: int
-    low_stock_count: int
-
+    is_active: bool
+    has_completed_onboarding: bool
+    last_login_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
 
@@ -87,9 +42,14 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
-# =====================================================
-# Internal Schema
-# =====================================================
-
 class UserInternal(UserResponse):
     deleted_at: Optional[datetime]
+
+
+
+class VerifyPasswordChangeOTP(BaseModel):
+    otp: str
+
+class ChangePasswordRequest(BaseModel):
+    change_token: str
+    new_password: str

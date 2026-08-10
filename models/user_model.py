@@ -32,9 +32,6 @@ class User(Base):
         Index("ix_users_deleted_at", "deleted_at"),
     )
 
-    # -------------------------------------------------------------------------
-    # Primary Key
-    # -------------------------------------------------------------------------
 
     id: Mapped[PyUUID] = mapped_column(
         UUID(as_uuid=True),
@@ -42,9 +39,6 @@ class User(Base):
         server_default=text("gen_random_uuid()"),
     )
 
-    # -------------------------------------------------------------------------
-    # Authentication
-    # -------------------------------------------------------------------------
 
     full_name: Mapped[str] = mapped_column(Text, nullable=False)
 
@@ -59,9 +53,6 @@ class User(Base):
         nullable=False,
     )
 
-    # -------------------------------------------------------------------------
-    # Profile
-    # -------------------------------------------------------------------------
 
     contact_number: Mapped[Optional[str]] = mapped_column(
         Text,
@@ -70,9 +61,6 @@ class User(Base):
 
     avatar: Mapped[Optional[str]] = mapped_column(Text)
 
-    # -------------------------------------------------------------------------
-    # Account
-    # -------------------------------------------------------------------------
 
     is_active: Mapped[bool] = mapped_column(
         Boolean,
@@ -88,9 +76,6 @@ class User(Base):
 
     last_login_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP)
 
-    # -------------------------------------------------------------------------
-    # Timestamps
-    # -------------------------------------------------------------------------
 
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP,

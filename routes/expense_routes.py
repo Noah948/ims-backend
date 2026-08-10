@@ -1,143 +1,78 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
 from core.database import get_db
-from core.dependencies import get_current_user
-from models.user_model import User
+from core.dependencies import get_current_business
+from models.business import Business
 from schema.expense import (
     ExpenseCreate,
     ExpenseUpdate,
     ExpenseResponse,
-    ExpenseFilter
+    ExpenseFilter,
 )
-from services.expense_service import (
+from controllers.expense_controller import (
     create_expense,
     get_expenses,
     get_expense,
     update_expense,
     delete_expense,
-    get_expenses_with_filters
+    filter_expenses,
 )
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
 
 
-# ---------------- CREATE ----------------
-@router.post(
-    "/",
-    response_model=ExpenseResponse,
-    status_code=status.HTTP_201_CREATED
-)
+@router.post("/", response_model=ExpenseResponse, status_code=status.HTTP_201_CREATED)
 def create_expense_endpoint(
     data: ExpenseCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-    expense, _ = create_expense(
-        db=db,
-        user_id=current_user.id,
-        data=data
-    )
-
-    return expense
+    return create_expense(db, business.id, data)
 
 
-# ---------------- READ ALL ----------------
-@router.get(
-    "/",
-    response_model=List[ExpenseResponse]
-)
+@router.get("/", response_model=List[ExpenseResponse])
 def list_expenses(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-    return get_expenses(
-        db=db,
-        user_id=current_user.id
-    )
+    return get_expenses(db, business.id)
 
 
-# ---------------- READ SINGLE ----------------
-@router.get(
-    "/{expense_id}",
-    response_model=ExpenseResponse
-)
+@router.get("/{expense_id}", response_model=ExpenseResponse)
 def retrieve_expense(
     expense_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-    expense = get_expense(
-        db=db,
-        user_id=current_user.id,
-        expense_id=expense_id
-    )
-
-    if not expense:
-        raise HTTPException(status_code=404, detail="Expense not found")
-
-    return expense
+    return get_expense(db, business.id, expense_id)
 
 
-# ---------------- UPDATE ----------------
-@router.put(
-    "/{expense_id}",
-    response_model=ExpenseResponse
-)
+@router.put("/{expense_id}", response_model=ExpenseResponse)
 def update_expense_endpoint(
     expense_id: UUID,
     data: ExpenseUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-    expense = update_expense(
-        db=db,
-        user_id=current_user.id,
-        expense_id=expense_id,
-        data=data
-    )
-
-    if not expense:
-        raise HTTPException(status_code=404, detail="Expense not found")
-
-    return expense
+    return update_expense(db, business.id, expense_id, data)
 
 
-# ---------------- SOFT DELETE ----------------
-@router.delete(
-    "/{expense_id}",
-    status_code=status.HTTP_204_NO_CONTENT
-)
+@router.delete("/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_expense_endpoint(
     expense_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-    expense = delete_expense(
-        db=db,
-        user_id=current_user.id,
-        expense_id=expense_id
-    )
-
-    if not expense:
-        raise HTTPException(status_code=404, detail="Expense not found")
-
-    return
+    return delete_expense(db, business.id, expense_id)
 
 
-@router.post(
-    "/filter",
-    response_model=List[ExpenseResponse]
-)
-def filter_expenses(
+@router.post("/filter", response_model=List[ExpenseResponse])
+def filter_expenses_endpoint(
     filters: ExpenseFilter,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-    return get_expenses_with_filters(
-        db=db,
-        user_id=current_user.id,
-        filters=filters
-    )
+    return filter_expenses(db, business.id, filters)
