@@ -8,6 +8,9 @@ from models.user_model import User
 from models.business import Business
 from models.business_member import BusinessMember
 from models.enums import MemberRole
+from models.business import Business
+from models.business_member import BusinessMember
+from services.subscription_service import should_block_access
 
 security = HTTPBearer()
 
@@ -33,7 +36,34 @@ def get_current_user(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
+            detail="User not found",
+        )
+
+    membership = db.query(BusinessMember).filter(
+        BusinessMember.user_id == user.id
+    ).first()
+
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No business associated with this account",
+        )
+
+    business = db.query(Business).filter(
+        Business.id == membership.business_id,
+        Business.deleted_at.is_(None),
+    ).first()
+
+    if not business:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Business is no longer available",
+        )
+
+    if should_block_access(business):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Subscription expired. Please renew your subscription to continue.",
         )
 
     return user

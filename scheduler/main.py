@@ -1,3 +1,6 @@
+# use this command to start scheduler
+# python -m scheduler.main
+
 from scheduler.scheduler import scheduler
 from scheduler.registery import register_jobs
 

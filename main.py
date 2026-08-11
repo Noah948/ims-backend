@@ -34,7 +34,6 @@ app = FastAPI(
 
 @app.on_event("startup")
 def startup():
-    print("connecting to redis ...")
     redis_client.ping()
     print("Connected to Redis")
 
