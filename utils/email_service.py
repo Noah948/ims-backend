@@ -3,16 +3,15 @@ import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
+from pathlib import Path
+
 
 load_dotenv()
 
 EMAIL_USER = os.getenv("EMAIL_USER", "")
 EMAIL_PASS = os.getenv("EMAIL_PASS", "")
 
-# NEW
-
-
-
+# NEW: Ensure EMAIL_USER and EMAIL_PASS are set
 if not EMAIL_USER or not EMAIL_PASS:
     raise ValueError(
         "EMAIL_USER and EMAIL_PASS environment variables must be set"
@@ -199,3 +198,126 @@ def send_verification_email(
         )
 
         server.send_message(message_obj)
+
+# =====================================================
+# SUBSCRIPTION EMAILS
+# =====================================================
+
+SUBSCRIPTION_TEMPLATE_DIR = (
+    Path(__file__).resolve().parent
+    / "email_templates"
+    / "subscription"
+)
+
+
+def _load_email_template(
+    template_name: str,
+    **context,
+) -> str:
+
+    template_path = SUBSCRIPTION_TEMPLATE_DIR / template_name
+
+    if not template_path.exists():
+        raise FileNotFoundError(
+            f"Email template not found: {template_path}"
+        )
+
+    html_content = template_path.read_text(
+        encoding="utf-8"
+    )
+
+    for key, value in context.items():
+        html_content = html_content.replace(
+            "{{ " + key + " }}",
+            str(value),
+        )
+
+    return html_content
+
+
+def _send_html_email(
+    email: str,
+    subject: str,
+    html_content: str,
+):
+    message_obj = MIMEMultipart("alternative")
+
+    message_obj["Subject"] = subject
+    message_obj["From"] = EMAIL_USER
+    message_obj["To"] = email
+
+    message_obj.attach(
+        MIMEText(html_content, "html")
+    )
+
+    with smtplib.SMTP_SSL(
+        "smtp.gmail.com",
+        465,
+    ) as server:
+
+        server.login(
+            EMAIL_USER,
+            EMAIL_PASS,
+        )
+
+        server.send_message(message_obj)
+
+
+def send_subscription_renewal_email(
+    email: str,
+    owner_name: str,
+    business_name: str,
+    subscription_end,
+):
+    html_content = _load_email_template(
+        "renewal_reminder.html",
+        owner_name=owner_name,
+        business_name=business_name,
+        subscription_end=subscription_end,
+    )
+
+    _send_html_email(
+        email=email,
+        subject="Your Subscription Is Ending Soon",
+        html_content=html_content,
+    )
+
+
+def send_subscription_final_warning_email(
+    email: str,
+    owner_name: str,
+    business_name: str,
+    grace_end,
+):
+    html_content = _load_email_template(
+        "final_warning.html",
+        owner_name=owner_name,
+        business_name=business_name,
+        grace_end=grace_end,
+    )
+
+    _send_html_email(
+        email=email,
+        subject="Subscription Renewal Required",
+        html_content=html_content,
+    )
+
+
+def send_subscription_deletion_warning_email(
+    email: str,
+    owner_name: str,
+    business_name: str,
+    permanent_deletion_date,
+):
+    html_content = _load_email_template(
+        "deletion_warning.html",
+        owner_name=owner_name,
+        business_name=business_name,
+        permanent_deletion_date=permanent_deletion_date,
+    )
+
+    _send_html_email(
+        email=email,
+        subject="Your Business Is Scheduled for Deletion",
+        html_content=html_content,
+    )

@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     text,
     Enum,
+    Boolean,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -19,7 +20,7 @@ from core.database import Base
 from models.enums import SubscriptionPlan, SubscriptionStatus
 
 if TYPE_CHECKING:
-    from .user import User
+    from .user_model import User
     from .business_member import BusinessMember
     from .category import Category
     from .product import Product
@@ -70,6 +71,24 @@ class Business(Base):
     subscription_start: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP)
 
     subscription_end: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP)
+
+    renewal_reminder_sent: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default="false",
+    )
+
+    final_warning_sent: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default="false",
+    )
+
+    deletion_warning_sent: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default="false",
+    )
 
     total_products: Mapped[int] = mapped_column(
         Integer,
