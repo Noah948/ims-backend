@@ -7,21 +7,69 @@ from core.dependencies import get_current_user
 from services.rate_limiter.dependency import rate_limit
 from services.rate_limiter.policies import AuthRateLimits
 
+from services.user_service import (
+    register_user,
+    verify_email_token,
+)
 
-from schema.user import UserResponse, UserLogin
-from schema.password_reset import ForgotPasswordRequest, VerifyOTPRequest
-
-from utils.auth import authenticate_user
-from services.account_recovery_service import (
+from services.auth_service import (
     request_account_recovery,
     recover_account,
 )
+
+from utils.auth import authenticate_user
+
+from schema.user import (
+    UserCreate,
+    UserLogin,
+    UserResponse,
+)
+
+from schema.password_reset import (
+    ForgotPasswordRequest,
+    VerifyOTPRequest,
+)
+
 
 router = APIRouter(
     prefix="/auth",
     tags=["Auth"],
 )
 
+
+# ------------------------------------------------------------------
+# Registration
+# ------------------------------------------------------------------
+
+# @router.post("/register")
+# def register(
+#     data: UserCreate,
+#     db: Session = Depends(get_db),
+# ):
+#     return register_user(
+#         db=db,
+#         data=data,
+#     )
+
+
+# ------------------------------------------------------------------
+# Email Verification
+# ------------------------------------------------------------------
+
+# @router.get("/verify-email")
+# def verify_email(
+#     token: str,
+#     db: Session = Depends(get_db),
+# ):
+#     return verify_email_token(
+#         db=db,
+#         token=token,
+#     )
+
+
+# ------------------------------------------------------------------
+# Login
+# ------------------------------------------------------------------
 
 @router.post(
     "/login",
@@ -41,24 +89,51 @@ def login(
     )
 
 
-# frontend can handle the logout by simply deleting the token on the client side.
-@router.post("/logout") 
-def logout(): return { 
-    "message": "Logged out successfully" 
+# ------------------------------------------------------------------
+# Logout
+# ------------------------------------------------------------------
+
+@router.post("/logout")
+def logout():
+    # JWT is stateless, so the client removes its token.
+    return {
+        "message": "Logged out successfully"
     }
 
 
-#  recover deleted account
+# ------------------------------------------------------------------
+# Current User
+# ------------------------------------------------------------------
+
+@router.get(
+    "/me",
+    response_model=UserResponse,
+)
+def me(
+    current_user=Depends(get_current_user),
+):
+    return current_user
+
+
+# ------------------------------------------------------------------
+# Account Recovery
+# ------------------------------------------------------------------
 
 @router.post("/recovery/request")
 def recovery_request(
     data: ForgotPasswordRequest,
     db: Session = Depends(get_db),
 ):
-    request_account_recovery(db, data.email)
+    request_account_recovery(
+        db=db,
+        email=data.email,
+    )
 
     return {
-        "message": "If the account is eligible for recovery, an OTP has been sent to the registered email."
+        "message": (
+            "If the account is eligible for recovery, "
+            "an OTP has been sent to the registered email."
+        )
     }
 
 
