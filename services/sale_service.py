@@ -1,3 +1,4 @@
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from decimal import Decimal
@@ -12,18 +13,26 @@ from utils.inventory import apply_stock_change
 from utils.pagination import paginate
 
 
-def create_sale(db: Session, business_id: UUID, user_id: UUID, data: SaleCreate):
+def create_sale(
+    db: Session,
+    business_id: UUID,
+    user_id: UUID,
+    data: SaleCreate,
+):
     try:
-        business_stmt = select(Business).where(Business.id == business_id)
+        business_stmt = select(Business).where(
+            Business.id == business_id
+        )
         business = db.execute(business_stmt).scalar_one()
 
         sale = Sale(
             business_id=business_id,
             created_by=user_id,
-            contact=data.contact,
+            customer_contact=data.customer_contact,
             total_amount=Decimal("0.00"),
-            total_profit=Decimal("0.00")
+            total_profit=Decimal("0.00"),
         )
+
         db.add(sale)
 
         total_amount = Decimal("0.00")
@@ -36,26 +45,40 @@ def create_sale(db: Session, business_id: UUID, user_id: UUID, data: SaleCreate)
                 .where(Product.business_id == business_id)
                 .with_for_update()
             )
+
             product = db.execute(stmt).scalar_one_or_none()
 
             if not product:
-                db.rollback()
-                return None, "PRODUCT_NOT_FOUND"
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Product not found",
+                )
 
             if int(product.stock) < int(item.quantity):
-                db.rollback()
-                return None, "INSUFFICIENT_STOCK"
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Insufficient stock to complete sale",
+                )
 
             apply_stock_change(
                 business=business,
                 product=product,
-                quantity_delta=-item.quantity
+                quantity_delta=-item.quantity,
             )
 
             cost_price = Decimal(str(product.price))
-            item_total_selling = Decimal(item.quantity) * item.selling_price
-            item_total_cost = Decimal(item.quantity) * cost_price
-            profit_loss = item_total_selling - item_total_cost
+
+            item_total_selling = (
+                Decimal(item.quantity) * item.selling_price
+            )
+
+            item_total_cost = (
+                Decimal(item.quantity) * cost_price
+            )
+
+            profit_loss = (
+                item_total_selling - item_total_cost
+            )
 
             sale_item = SaleItem(
                 sale=sale,
@@ -63,8 +86,9 @@ def create_sale(db: Session, business_id: UUID, user_id: UUID, data: SaleCreate)
                 quantity=item.quantity,
                 selling_price=item.selling_price,
                 cost_price=cost_price,
-                profit_loss=profit_loss
+                profit_loss=profit_loss,
             )
+
             db.add(sale_item)
 
             total_amount += item_total_selling
@@ -75,29 +99,58 @@ def create_sale(db: Session, business_id: UUID, user_id: UUID, data: SaleCreate)
 
         db.commit()
         db.refresh(sale)
-        return sale, None
+
+        return sale
+
+    except HTTPException:
+        db.rollback()
+        raise
 
     except Exception:
         db.rollback()
         raise
 
 
-def get_sales(db: Session, business_id: UUID, page: int = 1, limit: int = 10):
+def get_sales(
+    db: Session,
+    business_id: UUID,
+    page: int = 1,
+    limit: int = 10,
+):
     query = (
         select(Sale)
         .where(Sale.business_id == business_id)
         .order_by(Sale.created_at.desc())
     )
-    return paginate(query, db, page, limit)
+
+    return paginate(
+        query,
+        db,
+        page,
+        limit,
+    )
 
 
-def get_sale(db: Session, business_id: UUID, sale_id: UUID):
+def get_sale(
+    db: Session,
+    business_id: UUID,
+    sale_id: UUID,
+):
     stmt = (
         select(Sale)
         .where(Sale.id == sale_id)
         .where(Sale.business_id == business_id)
     )
-    return db.execute(stmt).scalar_one_or_none()
+
+    sale = db.execute(stmt).scalar_one_or_none()
+
+    if not sale:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sale not found",
+        )
+
+    return sale
 
 
 def return_sale_item(
@@ -105,7 +158,7 @@ def return_sale_item(
     business_id: UUID,
     user_id: UUID,
     sale_item_id: UUID,
-    quantity: int
+    quantity: int,
 ):
     try:
         stmt = (
@@ -114,49 +167,74 @@ def return_sale_item(
             .where(SaleItem.id == sale_item_id)
             .where(Sale.business_id == business_id)
         )
+
         sale_item = db.execute(stmt).scalar_one_or_none()
 
         if not sale_item:
-            return None, "SALE_ITEM_NOT_FOUND"
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Sale item not found",
+            )
 
-        remaining_quantity = sale_item.quantity - sale_item.returned_quantity
-        if quantity > remaining_quantity:
-            return None, "INVALID_RETURN_QUANTITY"
+        remaining_quantity = (
+            sale_item.quantity - sale_item.returned_quantity
+        )
+
+        if quantity <= 0 or quantity > remaining_quantity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid return quantity",
+            )
 
         product_stmt = (
             select(Product)
             .where(Product.id == sale_item.product_id)
             .with_for_update()
         )
+
         product = db.execute(product_stmt).scalar_one()
 
-        business_stmt = select(Business).where(Business.id == business_id)
+        business_stmt = select(Business).where(
+            Business.id == business_id
+        )
+
         business = db.execute(business_stmt).scalar_one()
 
         apply_stock_change(
             business=business,
             product=product,
-            quantity_delta=quantity
+            quantity_delta=quantity,
         )
 
         sale_item.returned_quantity += quantity
+
         if sale_item.returned_quantity == sale_item.quantity:
             sale_item.is_fully_returned = True
 
         db.flush()
 
-        active_quantity = sale_item.quantity - sale_item.returned_quantity
         sale = sale_item.sale
 
         total_amount = Decimal("0.00")
         total_profit = Decimal("0.00")
 
         for item in sale.items:
-            active_qty = item.quantity - item.returned_quantity
+            active_qty = (
+                item.quantity - item.returned_quantity
+            )
+
             if active_qty <= 0:
                 continue
-            item_total = Decimal(active_qty) * item.selling_price
-            item_profit = (item.selling_price - item.cost_price) * Decimal(active_qty)
+
+            item_total = (
+                Decimal(active_qty) * item.selling_price
+            )
+
+            item_profit = (
+                (item.selling_price - item.cost_price)
+                * Decimal(active_qty)
+            )
+
             total_amount += item_total
             total_profit += item_profit
 
@@ -165,7 +243,12 @@ def return_sale_item(
 
         db.commit()
         db.refresh(sale_item)
-        return sale_item, None
+
+        return sale_item
+
+    except HTTPException:
+        db.rollback()
+        raise
 
     except Exception:
         db.rollback()

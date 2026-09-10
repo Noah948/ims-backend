@@ -1,20 +1,30 @@
+from datetime import datetime
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.dependencies import get_current_business
+
 from models.business import Business
+
 from schema.common import PaginatedResponse
 from schema.audit_log import AuditLogResponse
-from controllers.audit_log_controller import get_audit_logs
 
-from typing import Optional
-from datetime import datetime
-
-router = APIRouter(prefix="/audit-logs", tags=["Audit Logs"])
+from services.audit_log_service import get_audit_logs
 
 
-@router.get("/", response_model=PaginatedResponse[AuditLogResponse])
+router = APIRouter(
+    prefix="/audit-logs",
+    tags=["Audit Logs"]
+)
+
+
+@router.get(
+    "/",
+    response_model=PaginatedResponse[AuditLogResponse]
+)
 def list_audit_logs(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),

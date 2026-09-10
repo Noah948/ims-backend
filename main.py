@@ -15,11 +15,11 @@ from routes.business_member_routes import router as business_member_router
 from routes.password_reset_routes import router as password_reset_router
 from routes.category_routes import router as category_router
 from routes.product_routes import router as product_router
-# from routes.job_routes import router as job_router
-# from routes.sale_routes import router as sale_router
-# from routes.expense_routes import router as expense_router
-# from routes.audit_logs import router as audit_log_router
-# from utils.audit_listener import register_audit_listeners
+from routes.job_routes import router as job_router
+from routes.sale_routes import router as sale_router
+from routes.expense_routes import router as expense_router
+from routes.audit_logs import router as audit_log_router
+from utils.audit_listener import register_audit_listeners
 
 # Base.metadata.create_all(bind=engine)
 
@@ -46,7 +46,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# register_audit_listeners()
+register_audit_listeners()
 # app.include_router(account_router)
 
 app.include_router(auth_router)
@@ -56,10 +56,10 @@ app.include_router(business_router)
 app.include_router(business_member_router)
 app.include_router(category_router)
 app.include_router(product_router)
-# app.include_router(sale_router)
-# app.include_router(audit_log_router)
-# app.include_router(expense_router)
-# app.include_router(job_router)
+app.include_router(sale_router)
+app.include_router(audit_log_router)
+app.include_router(expense_router)
+app.include_router(job_router)
 
 
 @app.get("/", tags=["Health"])

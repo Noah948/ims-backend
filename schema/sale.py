@@ -22,13 +22,13 @@ class SaleItemCreate(BaseModel):
 # =====================================================
 
 class SaleCreate(BaseModel):
-    contact: str
+    customer_contact: str
 
     items: List[SaleItemCreate]
 
-    @field_validator("contact")
+    @field_validator("customer_contact")
     @classmethod
-    def validate_contact(cls, v: str) -> str:
+    def validate_customer_contact(cls, v: str) -> str:
         cleaned = v.replace(" ", "").replace("+", "")
 
         if not cleaned.isdigit():
@@ -72,7 +72,7 @@ class SaleItemResponse(BaseModel):
 class SaleResponse(BaseModel):
     id: UUID
 
-    contact: str
+    customer_contact: str
 
     total_amount: Decimal
 
@@ -86,6 +86,9 @@ class SaleResponse(BaseModel):
         from_attributes = True
 
 
-# ________ Return Sale Item ________
+# =====================================================
+# Return Sale Item
+# =====================================================
+
 class SaleItemReturn(BaseModel):
     quantity: int = Field(..., gt=0)
