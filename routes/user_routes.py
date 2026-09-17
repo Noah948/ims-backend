@@ -1,4 +1,13 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+
+import os
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    status,
+    HTTPException,
+)
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from core.database import get_db
@@ -14,7 +23,6 @@ from schema.user import (
     VerifyPasswordChangeOTP,
     ChangePasswordRequest,
 )
-
 
 from services.user_service import (
     register_user,
@@ -41,6 +49,16 @@ router = APIRouter(
 )
 
 
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:3000",
+)
+
+
+# =====================================================
+# REGISTRATION
+# =====================================================
+
 @router.post(
     "/register",
     status_code=status.HTTP_200_OK,
@@ -55,15 +73,50 @@ def register(
     )
 
 
+# =====================================================
+# EMAIL VERIFICATION
+# =====================================================
+
 @router.get(
     "/verify-email",
-    status_code=status.HTTP_200_OK,
 )
 def verify_email(
     token: str,
 ):
-    return verify_email_token(token)
+    """
+    Verify the email automatically when the user
+    clicks the verification link in their email.
 
+    Flow:
+
+        Email link
+            ↓
+        /users/verify-email?token=...
+            ↓
+        verify_email_token()
+            ↓
+        Redis registration marked as verified
+            ↓
+        Redirect to frontend
+    """
+
+    result = verify_email_token(token)
+
+    registration_id = result["registration_id"]
+
+    return RedirectResponse(
+        url=(
+            f"{FRONTEND_URL}"
+            f"/email-verified"
+            f"?registration_id={registration_id}"
+        ),
+        status_code=status.HTTP_302_FOUND,
+    )
+
+
+# =====================================================
+# CURRENT USER
+# =====================================================
 
 @router.get(
     "/me",
@@ -119,12 +172,12 @@ def verify_delete(
     if not token:
         raise HTTPException(
             status_code=400,
-            detail="Invalid or expired OTP"
+            detail="Invalid or expired OTP",
         )
 
     return {
         "message": "OTP verified successfully",
-        "delete_token": token
+        "delete_token": token,
     }
 
 
@@ -141,7 +194,9 @@ def delete(
     )
 
 
-# password change
+# =====================================================
+# PASSWORD CHANGE
+# =====================================================
 
 @router.post("/request-password-change")
 def request_password_change_endpoint(
@@ -152,6 +207,7 @@ def request_password_change_endpoint(
     return {
         "message": "Password change OTP sent to your email"
     }
+
 
 @router.post("/verify-password-change-otp")
 def verify_password_change_otp_endpoint(
@@ -173,6 +229,7 @@ def verify_password_change_otp_endpoint(
         "message": "OTP verified",
         "change_token": token,
     }
+
 
 @router.post("/change-password")
 def change_password_endpoint(
@@ -196,3 +253,4 @@ def change_password_endpoint(
     return {
         "message": "Password changed successfully"
     }
+

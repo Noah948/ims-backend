@@ -25,7 +25,14 @@ def _registration_key(registration_id: str) -> str:
     return f"{REGISTRATION_PREFIX}{registration_id}"
 
 
-def register_user(db: Session, data: UserCreate,) -> dict:
+# =====================================================
+# Register User
+# =====================================================
+
+def register_user(
+    db: Session,
+    data: UserCreate,
+) -> dict:
     """
     Start registration.
 
@@ -38,6 +45,10 @@ def register_user(db: Session, data: UserCreate,) -> dict:
 
     if not SECRET_KEY:
         raise RuntimeError("JWT_SECRET_KEY is not configured")
+
+    # -------------------------------------------------
+    # Check existing user
+    # -------------------------------------------------
 
     existing_user = (
         db.query(User)
@@ -61,8 +72,15 @@ def register_user(db: Session, data: UserCreate,) -> dict:
             detail="Contact number already registered",
         )
 
+    # -------------------------------------------------
+    # Hash password
+    # -------------------------------------------------
 
     password_hash = hash_password(data.password)
+
+    # -------------------------------------------------
+    # Create temporary registration ID
+    # -------------------------------------------------
 
     registration_id = secrets.token_urlsafe(32)
 
@@ -77,16 +95,29 @@ def register_user(db: Session, data: UserCreate,) -> dict:
 
     redis_key = _registration_key(registration_id)
 
+    # -------------------------------------------------
+    # Store registration in Redis
+    # -------------------------------------------------
+
     redis_client.set(
         redis_key,
         json.dumps(registration_data),
         ex=REGISTRATION_TTL,
     )
 
+    # -------------------------------------------------
+    # Create verification JWT
+    # -------------------------------------------------
 
     verification_payload = {
         "registration_id": registration_id,
         "email": str(data.email),
+
+        # Important:
+        # Identifies this JWT specifically as an
+        # email verification token.
+        "type": "email_verification",
+
         "exp": datetime.utcnow() + timedelta(minutes=15),
     }
 
@@ -96,15 +127,23 @@ def register_user(db: Session, data: UserCreate,) -> dict:
         algorithm=ALGORITHM,
     )
 
+    # -------------------------------------------------
+    # Send verification email
+    # -------------------------------------------------
 
     try:
+
         send_verification_email(
             email=str(data.email),
             token=verification_token,
         )
 
     except Exception:
+
+        # If email sending fails, remove the temporary
+        # registration from Redis.
         redis_client.delete(redis_key)
+
         raise
 
     return {
@@ -112,55 +151,110 @@ def register_user(db: Session, data: UserCreate,) -> dict:
     }
 
 
+# =====================================================
+# Verify Email Token
+# =====================================================
+
 def verify_email_token(token: str) -> dict:
     """
-    Verify the email.
+    Verify the email verification token.
 
-    IMPORTANT:
     This does NOT create anything in PostgreSQL.
-    It only marks the temporary registration as verified in Redis.
+
+    It only marks the temporary registration as verified
+    in Redis.
     """
 
     if not SECRET_KEY:
         raise RuntimeError("JWT_SECRET_KEY is not configured")
 
+    # -------------------------------------------------
+    # Decode JWT
+    # -------------------------------------------------
+
     try:
+
         payload = jwt.decode(
             token,
             SECRET_KEY,
             algorithms=[ALGORITHM],
         )
+
     except JWTError:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired verification token",
         )
 
-    registration_id = payload.get("registration_id")
+    # -------------------------------------------------
+    # Validate token type
+    # -------------------------------------------------
 
-    if not registration_id:
+    if payload.get("type") != "email_verification":
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid verification token",
         )
+
+    # -------------------------------------------------
+    # Get registration ID
+    # -------------------------------------------------
+
+    registration_id = payload.get("registration_id")
+
+    if not registration_id:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification token",
+        )
+
+    # -------------------------------------------------
+    # Get registration from Redis
+    # -------------------------------------------------
 
     redis_key = _registration_key(registration_id)
 
     raw_registration = redis_client.get(redis_key)
 
     if not raw_registration:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Registration expired or does not exist",
         )
 
+    # -------------------------------------------------
+    # Decode registration data
+    # -------------------------------------------------
+
     try:
+
         registration = json.loads(raw_registration)
+
     except (TypeError, json.JSONDecodeError):
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Invalid registration data",
         )
+
+    # -------------------------------------------------
+    # Already verified
+    # -------------------------------------------------
+
+    if registration.get("verified"):
+
+        return {
+            "message": "Email already verified",
+            "registration_id": registration_id,
+        }
+
+    # -------------------------------------------------
+    # Mark as verified
+    # -------------------------------------------------
 
     registration["verified"] = True
 
@@ -176,7 +270,13 @@ def verify_email_token(token: str) -> dict:
     }
 
 
-def get_verified_registration(registration_id: str) -> dict:
+# =====================================================
+# Get Verified Registration
+# =====================================================
+
+def get_verified_registration(
+    registration_id: str,
+) -> dict:
     """
     Get verified registration data from Redis.
     """
@@ -186,20 +286,25 @@ def get_verified_registration(registration_id: str) -> dict:
     raw_registration = redis_client.get(redis_key)
 
     if not raw_registration:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Registration expired or does not exist",
         )
 
     try:
+
         registration = json.loads(raw_registration)
+
     except (TypeError, json.JSONDecodeError):
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Invalid registration data",
         )
 
     if not registration.get("verified"):
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email has not been verified",
@@ -208,11 +313,22 @@ def get_verified_registration(registration_id: str) -> dict:
     return registration
 
 
-def delete_registration(registration_id: str) -> None:
+# =====================================================
+# Delete Registration
+# =====================================================
+
+def delete_registration(
+    registration_id: str,
+) -> None:
+
     redis_client.delete(
         _registration_key(registration_id)
     )
 
+
+# =====================================================
+# Get User By Email
+# =====================================================
 
 def get_user_by_email(
     db: Session,
@@ -226,6 +342,10 @@ def get_user_by_email(
     )
 
 
+# =====================================================
+# Get User By ID
+# =====================================================
+
 def get_user_by_id(
     db: Session,
     user_id,
@@ -238,6 +358,10 @@ def get_user_by_id(
     )
 
 
+# =====================================================
+# Update User
+# =====================================================
+
 def update_user(
     db: Session,
     user: User,
@@ -245,6 +369,7 @@ def update_user(
 ) -> User:
 
     if data.full_name is not None:
+
         user.full_name = data.full_name
 
     if data.contact_number is not None:
@@ -259,6 +384,7 @@ def update_user(
         )
 
         if existing_contact:
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Contact number already exists",
@@ -267,6 +393,7 @@ def update_user(
         user.contact_number = data.contact_number
 
     if data.avatar is not None:
+
         user.avatar = data.avatar
 
     user.updated_at = datetime.utcnow()
