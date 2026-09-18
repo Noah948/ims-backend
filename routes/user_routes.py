@@ -7,7 +7,7 @@ from fastapi import (
     status,
     HTTPException,
 )
-from fastapi.responses import RedirectResponse
+# from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from core.database import get_db
@@ -49,10 +49,10 @@ router = APIRouter(
 )
 
 
-FRONTEND_URL = os.getenv(
-    "FRONTEND_URL",
-    "http://localhost:3000",
-)
+# FRONTEND_URL = os.getenv(
+#     "FRONTEND_URL",
+#     "http://localhost:3000",
+# )
 
 
 # =====================================================
@@ -83,35 +83,7 @@ def register(
 def verify_email(
     token: str,
 ):
-    """
-    Verify the email automatically when the user
-    clicks the verification link in their email.
-
-    Flow:
-
-        Email link
-            ↓
-        /users/verify-email?token=...
-            ↓
-        verify_email_token()
-            ↓
-        Redis registration marked as verified
-            ↓
-        Redirect to frontend
-    """
-
-    result = verify_email_token(token)
-
-    registration_id = result["registration_id"]
-
-    return RedirectResponse(
-        url=(
-            f"{FRONTEND_URL}"
-            f"/email-verified"
-            f"?registration_id={registration_id}"
-        ),
-        status_code=status.HTTP_302_FOUND,
-    )
+    return verify_email_token(token)
 
 
 # =====================================================

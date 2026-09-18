@@ -22,6 +22,10 @@ BACKEND_URL = os.getenv(
     "http://127.0.0.1:8000",
 )
 
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:5173",
+)
 
 if not EMAIL_USER or not EMAIL_PASS:
     raise ValueError(
@@ -188,8 +192,8 @@ def send_verification_email(
     # -------------------------------------------------
 
     verification_link = (
-        f"{BACKEND_URL}"
-        f"/users/verify-email"
+        f"{FRONTEND_URL}"
+        f"/verify-email"
         f"?token={token}"
     )
 
