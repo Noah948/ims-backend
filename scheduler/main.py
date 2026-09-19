@@ -1,6 +1,10 @@
 # use this command to start scheduler
 # python -m scheduler.main
 
+
+# this is only used when you want to run the scheduler in a separate process, 
+# for example when you want to run multiple servers. 
+ 
 from scheduler.scheduler import scheduler
 from scheduler.registery import register_jobs
 

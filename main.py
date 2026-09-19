@@ -6,8 +6,12 @@ from core.config import settings
 from core.redis import redis_client
 from models import *
 
-# from routes.account_routes import router as account_router
+# remove the 2 imports below and also change sheduler to use blocking instead of background 
+# when you want multiple servers to run 
+from scheduler.scheduler import scheduler
+from scheduler.registery import register_jobs
 
+# from routes.account_routes import router as account_router
 from routes.auth_routes import router as auth_router
 from routes.user_routes import router as user_router
 from routes.business_routes import router as business_router
@@ -36,6 +40,18 @@ app = FastAPI(
 def startup():
     redis_client.ping()
     print("Connected to Redis")
+
+    register_jobs()
+    scheduler.start()
+    print("Scheduler started")
+
+
+# you can remove this shutdown event if you want the blocking scheduler
+@app.on_event("shutdown")
+def shutdown():
+    if scheduler.running:
+        scheduler.shutdown()
+        print("Scheduler stopped")
 
 
 app.add_middleware(

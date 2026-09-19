@@ -181,8 +181,16 @@ def register_subscription_jobs(scheduler):
 
     scheduler.add_job(
         subscription_job,
-        trigger="interval",
-        seconds=10,
+
+        # Production
+        trigger="cron",
+        hour=2,
+        minute=0,
+
+        # Testing:
+        # trigger="interval",
+        # seconds=10,
+
         id="subscription_job",
         replace_existing=True,
     )
