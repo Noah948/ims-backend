@@ -9,3 +9,4 @@ from .sale import Sale
 from .user_model import User
 from .business import Business
 from .business_member import BusinessMember
+from .inventory_snapshot import InventorySnapshot

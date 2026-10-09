@@ -23,6 +23,7 @@ from routes.job_routes import router as job_router
 from routes.sale_routes import router as sale_router
 from routes.expense_routes import router as expense_router
 from routes.audit_logs import router as audit_log_router
+from routes.dashboard_routes import router as dashboard_router
 from utils.audit_listener import register_audit_listeners
 
 # Base.metadata.create_all(bind=engine)
@@ -76,6 +77,11 @@ app.include_router(sale_router)
 app.include_router(audit_log_router)
 app.include_router(expense_router)
 app.include_router(job_router)
+app.include_router(dashboard_router)
+
+if settings.ENABLE_SEED:
+    from routes.seed_routes import router as seed_router
+    app.include_router(seed_router)
 
 
 @app.get("/", tags=["Health"])

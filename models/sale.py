@@ -30,6 +30,7 @@ class Sale(Base):
     __table_args__ = (
         Index("ix_sales_business_id", "business_id"),
         Index("ix_sales_created_by", "created_by"),
+        Index("ix_sales_business_created", "business_id", "created_at"),
         CheckConstraint(
             "customer_contact ~ '^[0-9]{10}$'",
             name="ck_sales_customer_contact_10_digits",

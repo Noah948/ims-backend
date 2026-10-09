@@ -11,6 +11,7 @@ from models.business import Business
 from schema.sale import SaleCreate
 from utils.inventory import apply_stock_change
 from utils.pagination import paginate
+from services.dashboard_service import invalidate_dashboard
 
 
 def create_sale(
@@ -98,6 +99,7 @@ def create_sale(
         sale.total_profit = total_profit
 
         db.commit()
+        invalidate_dashboard(business_id)
         db.refresh(sale)
 
         return sale
@@ -242,6 +244,7 @@ def return_sale_item(
         sale.total_profit = total_profit
 
         db.commit()
+        invalidate_dashboard(business_id)
         db.refresh(sale_item)
 
         return sale_item

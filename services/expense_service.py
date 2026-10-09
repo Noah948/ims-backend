@@ -8,6 +8,7 @@ from scheduler.policies import EXPENSE_RETENTION_DAYS
 
 from models.expense import Expense
 from schema.expense import ExpenseCreate, ExpenseUpdate, ExpenseFilter
+from services.dashboard_service import invalidate_dashboard
 
 
 def create_expense(db: Session, business_id: UUID, data: ExpenseCreate):
@@ -23,6 +24,7 @@ def create_expense(db: Session, business_id: UUID, data: ExpenseCreate):
 
         db.add(expense)
         db.commit()
+        invalidate_dashboard(business_id)
         db.refresh(expense)
 
         return expense
@@ -94,6 +96,7 @@ def update_expense(
             setattr(expense, field, value)
 
         db.commit()
+        invalidate_dashboard(business_id)
         db.refresh(expense)
 
         return expense
@@ -130,6 +133,7 @@ def delete_expense(
         expense.deleted_at = datetime.now(UTC)
 
         db.commit()
+        invalidate_dashboard(business_id)
 
         return expense
 

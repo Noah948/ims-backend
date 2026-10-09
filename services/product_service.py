@@ -17,6 +17,7 @@ from utils.inventory import apply_stock_change
 from utils.pagination import paginate
 
 from scheduler.policies import PRODUCT_RETENTION_DAYS
+from services.dashboard_service import invalidate_dashboard
 
 
 def validate_dynamic_fields(
@@ -123,6 +124,7 @@ def create_product(
         )
 
     db.commit()
+    invalidate_dashboard(business_id)
     db.refresh(product)
 
     return product
@@ -256,6 +258,7 @@ def update_product(
         setattr(product, key, value)
 
     db.commit()
+    invalidate_dashboard(business_id)
     db.refresh(product)
 
     return product
@@ -291,6 +294,7 @@ def delete_product(
     product.deleted_at = datetime.now(UTC)
 
     db.commit()
+    invalidate_dashboard(business_id)
 
     return None
 
@@ -330,6 +334,7 @@ def add_product_quantity(
     )
 
     db.commit()
+    invalidate_dashboard(business_id)
     db.refresh(product)
 
     return product
@@ -376,6 +381,7 @@ def decrease_product_quantity(
     )
 
     db.commit()
+    invalidate_dashboard(business_id)
     db.refresh(product)
 
     return product

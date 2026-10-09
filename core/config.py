@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     UPSTASH_REDIS_REST_URL: str = ""
     UPSTASH_REDIS_REST_TOKEN: str = ""
 
+    # Exposes the unauthenticated POST /dev/seed mock-data endpoint. Never enable in prod.
+    ENABLE_SEED: bool = False
+
     # # Razorpay
     # RAZORPAY_KEY_ID: str = ""
     # RAZORPAY_KEY_SECRET: str = ""

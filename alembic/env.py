@@ -24,6 +24,7 @@ import models.sale
 import models.user_model
 import models.business_member
 import models.business
+import models.inventory_snapshot
 
 
 # 🔹 Alembic config
