@@ -1,22 +1,22 @@
-from fastapi import APIRouter, Depends, status, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
+
 from core.database import get_db
-from core.dependencies import get_current_user
+from core.dependencies import get_current_business
+
+from models.business import Business
 
 from schema.category import (
     CategoryCreate,
     CategoryUpdate,
     CategoryResponse,
-
     CategoryFieldCreate,
     CategoryFieldUpdate,
     CategoryFieldResponse,
-
-    # ✅ NEW
-    CategoryFieldReorder
+    CategoryFieldReorder,
 )
 
 from services.category_service import (
@@ -25,24 +25,18 @@ from services.category_service import (
     get_category,
     update_category,
     delete_category,
-
     add_category_field,
     update_category_field,
     delete_category_field,
-    reorder_category_fields
+    reorder_category_fields,
 )
 
-from models.user_model import User
 
 router = APIRouter(
     prefix="/categories",
     tags=["Categories"]
 )
 
-
-# =====================================================
-# CATEGORY ROUTES
-# =====================================================
 
 @router.post(
     "/",
@@ -52,13 +46,12 @@ router = APIRouter(
 def create_category_endpoint(
     data: CategoryCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-
     return create_category(
-        db=db,
-        user_id=str(current_user.id),
-        data=data
+        db,
+        str(business.id),
+        data
     )
 
 
@@ -68,12 +61,11 @@ def create_category_endpoint(
 )
 def list_categories(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-
     return get_categories(
-        db=db,
-        user_id=str(current_user.id)
+        db,
+        str(business.id)
     )
 
 
@@ -84,22 +76,13 @@ def list_categories(
 def retrieve_category(
     category_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-
-    category = get_category(
-        db=db,
-        user_id=str(current_user.id),
-        category_id=str(category_id)
+    return get_category(
+        db,
+        str(business.id),
+        str(category_id)
     )
-
-    if not category:
-        raise HTTPException(
-            status_code=404,
-            detail="Category not found"
-        )
-
-    return category
 
 
 @router.patch(
@@ -110,23 +93,14 @@ def update_category_endpoint(
     category_id: UUID,
     data: CategoryUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-
-    category = update_category(
-        db=db,
-        user_id=str(current_user.id),
-        category_id=str(category_id),
-        data=data
+    return update_category(
+        db,
+        str(business.id),
+        str(category_id),
+        data
     )
-
-    if not category:
-        raise HTTPException(
-            status_code=404,
-            detail="Category not found"
-        )
-
-    return category
 
 
 @router.delete(
@@ -136,29 +110,15 @@ def update_category_endpoint(
 def delete_category_endpoint(
     category_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-
-    deleted = delete_category(
-        db=db,
-        user_id=str(current_user.id),
-        category_id=str(category_id)
+    return delete_category(
+        db,
+        str(category_id),
+        str(business.id)
     )
 
-    if not deleted:
-        raise HTTPException(
-            status_code=404,
-            detail="Category not found"
-        )
 
-    return
-
-
-# =====================================================
-# FIELD ROUTES
-# =====================================================
-
-# ---------------- ADD FIELD ----------------
 @router.post(
     "/{category_id}/fields",
     response_model=CategoryFieldResponse,
@@ -168,34 +128,16 @@ def add_field_endpoint(
     category_id: UUID,
     data: CategoryFieldCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
+    return add_category_field(
+        db,
+        str(business.id),
+        str(category_id),
+        data
+    )
 
-    try:
 
-        field = add_category_field(
-            db=db,
-            user_id=str(current_user.id),
-            category_id=str(category_id),
-            data=data
-        )
-
-        if not field:
-            raise HTTPException(
-                status_code=404,
-                detail="Category not found"
-            )
-
-        return field
-
-    except ValueError as e:
-
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        )
-
-# ---------------- REORDER FIELDS ----------------
 @router.patch(
     "/{category_id}/fields/reorder",
     response_model=List[CategoryFieldResponse]
@@ -204,35 +146,16 @@ def reorder_fields_endpoint(
     category_id: UUID,
     payload: CategoryFieldReorder,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
+    return reorder_category_fields(
+        db,
+        str(business.id),
+        str(category_id),
+        payload.ordered_field_ids
+    )
 
-    try:
 
-        fields = reorder_category_fields(
-            db=db,
-            user_id=str(current_user.id),
-            category_id=str(category_id),
-            ordered_field_ids=payload.ordered_field_ids
-        )
-
-        if fields is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Category not found"
-            )
-
-        return fields
-
-    except ValueError as e:
-
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        )
-    
-    
-# ---------------- UPDATE FIELD ----------------
 @router.patch(
     "/{category_id}/fields/{field_id}",
     response_model=CategoryFieldResponse
@@ -242,36 +165,17 @@ def update_field_endpoint(
     field_id: UUID,
     data: CategoryFieldUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-
-    try:
-
-        field = update_category_field(
-            db=db,
-            user_id=str(current_user.id),
-            category_id=str(category_id),
-            field_id=str(field_id),
-            data=data
-        )
-
-        if not field:
-            raise HTTPException(
-                status_code=404,
-                detail="Field or category not found"
-            )
-
-        return field
-
-    except ValueError as e:
-
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        )
+    return update_category_field(
+        db,
+        str(business.id),
+        str(category_id),
+        str(field_id),
+        data
+    )
 
 
-# ---------------- DELETE FIELD ----------------
 @router.delete(
     "/{category_id}/fields/{field_id}",
     status_code=status.HTTP_204_NO_CONTENT
@@ -280,23 +184,11 @@ def delete_field_endpoint(
     category_id: UUID,
     field_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    business: Business = Depends(get_current_business),
 ):
-
-    deleted = delete_category_field(
-        db=db,
-        user_id=str(current_user.id),
-        category_id=str(category_id),
-        field_id=str(field_id)
+    return delete_category_field(
+        db,
+        str(business.id),
+        str(category_id),
+        str(field_id)
     )
-
-    if not deleted:
-        raise HTTPException(
-            status_code=404,
-            detail="Field or category not found"
-        )
-
-    return
-
-
-

@@ -6,7 +6,8 @@ from typing import Optional, Dict, Any
 
 class AuditLogResponse(BaseModel):
     id: UUID
-    user_id: UUID
+    business_id: UUID
+    user_id: Optional[UUID]
     entity_type: str
     entity_id: Optional[UUID]
     operation: str

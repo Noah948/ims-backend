@@ -1,23 +1,22 @@
-from sqlalchemy import (
-    Integer,
-    TIMESTAMP,
-    ForeignKey,
-    Index
-)
-
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.types import Numeric
-
-from uuid import UUID as PyUUID, uuid4
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
+from uuid import UUID as PyUUID
 
+from sqlalchemy import (
+    Boolean,
+    ForeignKey,
+    Index,
+    Integer,
+    TIMESTAMP,
+    text,
+)
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+from sqlalchemy.types import Numeric
 
 from core.database import Base
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .sale import Sale
@@ -35,69 +34,74 @@ class SaleItem(Base):
     id: Mapped[PyUUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
-        default=uuid4
+        server_default=text("gen_random_uuid()"),
     )
 
-    # parent sale / invoice
+    # Parent Sale
     sale_id: Mapped[PyUUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("sales.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
     )
 
-    # sold product
+    # Product sold
     product_id: Mapped[PyUUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("products.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
     )
 
     quantity: Mapped[int] = mapped_column(
         Integer,
-        nullable=False
+        nullable=False,
     )
 
     returned_quantity: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
-        default=0
+        server_default=text("0"),
     )
 
     is_fully_returned: Mapped[bool] = mapped_column(
-        default=False,
-        nullable=False
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
     )
-    
-    # selling price per unit
+
+    # Selling price per unit at the time of sale
     selling_price: Mapped[Decimal] = mapped_column(
         Numeric(10, 2),
-        nullable=False
+        nullable=False,
     )
 
-    # original product cost price per unit
+    # Cost price per unit at the time of sale
     cost_price: Mapped[Decimal] = mapped_column(
         Numeric(10, 2),
-        nullable=False
+        nullable=False,
     )
 
-    # total profit/loss for this item
+    # Profit/Loss for this line item
     profit_loss: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),
-        nullable=False
+        nullable=False,
     )
 
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP,
-        server_default=func.now()
+        server_default=func.now(),
+        nullable=False,
     )
 
-    # relationships
+    # ------------------------------------------------------------------
+    # Relationships
+    # ------------------------------------------------------------------
+
     sale: Mapped["Sale"] = relationship(
         back_populates="items",
-        lazy="selectin"
+        lazy="selectin",
     )
 
     product: Mapped["Product"] = relationship(
         back_populates="sale_items",
-        lazy="selectin"
+        lazy="selectin",
     )

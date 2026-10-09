@@ -1,76 +1,92 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
+from fastapi import HTTPException, status
 from uuid import UUID, uuid4
 from datetime import datetime, timedelta, UTC
+
 from scheduler.policies import EXPENSE_RETENTION_DAYS
 
 from models.expense import Expense
 from schema.expense import ExpenseCreate, ExpenseUpdate, ExpenseFilter
 
 
-# ---------------- CREATE ----------------
-def create_expense(db: Session, user_id: UUID, data: ExpenseCreate):
+def create_expense(db: Session, business_id: UUID, data: ExpenseCreate):
     try:
         expense = Expense(
             id=uuid4(),
-            user_id=user_id,
+            business_id=business_id,
             title=data.title,
             amount=data.amount,
             expense_date=data.expense_date,
-            # description=data.description,
             is_recurring=data.is_recurring,
         )
 
         db.add(expense)
         db.commit()
         db.refresh(expense)
-        return expense, None
+
+        return expense
 
     except Exception:
         db.rollback()
         raise
 
 
-# ---------------- READ ALL ----------------
-def get_expenses(db: Session, user_id: UUID):
+def get_expenses(db: Session, business_id: UUID):
     stmt = (
         select(Expense)
-        .where(Expense.user_id == user_id)
+        .where(Expense.business_id == business_id)
         .where(Expense.deleted_at.is_(None))
         .order_by(Expense.expense_date.desc())
     )
+
     return db.execute(stmt).scalars().all()
 
 
-# ---------------- READ SINGLE ----------------
-def get_expense(db: Session, user_id: UUID, expense_id: UUID):
+def get_expense(
+    db: Session,
+    business_id: UUID,
+    expense_id: UUID,
+):
     stmt = (
         select(Expense)
         .where(Expense.id == expense_id)
-        .where(Expense.user_id == user_id)
+        .where(Expense.business_id == business_id)
         .where(Expense.deleted_at.is_(None))
     )
-    return db.execute(stmt).scalar_one_or_none()
+
+    expense = db.execute(stmt).scalar_one_or_none()
+
+    if not expense:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Expense not found",
+        )
+
+    return expense
 
 
-# ---------------- UPDATE ----------------
 def update_expense(
     db: Session,
-    user_id: UUID,
+    business_id: UUID,
     expense_id: UUID,
-    data: ExpenseUpdate
+    data: ExpenseUpdate,
 ):
     try:
         stmt = (
             select(Expense)
             .where(Expense.id == expense_id)
-            .where(Expense.user_id == user_id)
+            .where(Expense.business_id == business_id)
             .where(Expense.deleted_at.is_(None))
         )
+
         expense = db.execute(stmt).scalar_one_or_none()
 
         if not expense:
-            return None
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Expense not found",
+            )
 
         update_data = data.model_dump(exclude_unset=True)
 
@@ -79,39 +95,56 @@ def update_expense(
 
         db.commit()
         db.refresh(expense)
+
         return expense
+
+    except HTTPException:
+        raise
 
     except Exception:
         db.rollback()
         raise
 
 
-# ---------------- SOFT DELETE ----------------
-def delete_expense(db: Session, user_id: UUID, expense_id: UUID):
+def delete_expense(
+    db: Session,
+    business_id: UUID,
+    expense_id: UUID,
+):
     try:
         stmt = (
             select(Expense)
             .where(Expense.id == expense_id)
-            .where(Expense.user_id == user_id)
+            .where(Expense.business_id == business_id)
             .where(Expense.deleted_at.is_(None))
         )
+
         expense = db.execute(stmt).scalar_one_or_none()
 
         if not expense:
-            return None
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Expense not found",
+            )
 
         expense.deleted_at = datetime.now(UTC)
 
         db.commit()
+
         return expense
+
+    except HTTPException:
+        raise
 
     except Exception:
         db.rollback()
         raise
 
-# --------------------expense cleanup--------------------
+
 def cleanup_deleted_expenses(db: Session):
-    cutoff = datetime.now(UTC) - timedelta(days=EXPENSE_RETENTION_DAYS)
+    cutoff = datetime.now(UTC) - timedelta(
+        days=EXPENSE_RETENTION_DAYS
+    )
 
     (
         db.query(Expense)
@@ -124,45 +157,51 @@ def cleanup_deleted_expenses(db: Session):
 
     db.commit()
 
-# ________ FILTERS ________
 
 def get_expenses_with_filters(
     db: Session,
-    user_id: UUID,
-    filters: ExpenseFilter
+    business_id: UUID,
+    filters: ExpenseFilter,
 ):
     stmt = select(Expense).where(
-        Expense.user_id == user_id,
-        Expense.deleted_at.is_(None)
+        Expense.business_id == business_id,
+        Expense.deleted_at.is_(None),
     )
 
     conditions = []
 
-    # ---------------- DATE FILTER ----------------
     if filters.date:
         if filters.date.from_date:
-            conditions.append(Expense.expense_date >= filters.date.from_date)
+            conditions.append(
+                Expense.expense_date >= filters.date.from_date
+            )
 
         if filters.date.to_date:
-            conditions.append(Expense.expense_date <= filters.date.to_date)
+            conditions.append(
+                Expense.expense_date <= filters.date.to_date
+            )
 
-    # ---------------- AMOUNT FILTER ----------------
     if filters.amount:
         if filters.amount.min is not None:
-            conditions.append(Expense.amount >= filters.amount.min)
+            conditions.append(
+                Expense.amount >= filters.amount.min
+            )
 
         if filters.amount.max is not None:
-            conditions.append(Expense.amount <= filters.amount.max)
+            conditions.append(
+                Expense.amount <= filters.amount.max
+            )
 
-    # ---------------- BOOLEAN FILTER ----------------
     if filters.is_recurring is not None:
-        conditions.append(Expense.is_recurring == filters.is_recurring)
+        conditions.append(
+            Expense.is_recurring == filters.is_recurring
+        )
 
-    # ---------------- SEARCH FILTER ----------------
     if filters.search:
-        conditions.append(Expense.title.ilike(f"%{filters.search}%"))
+        conditions.append(
+            Expense.title.ilike(f"%{filters.search}%")
+        )
 
-    # Apply all conditions
     if conditions:
         stmt = stmt.where(and_(*conditions))
 

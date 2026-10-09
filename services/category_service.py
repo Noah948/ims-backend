@@ -3,23 +3,22 @@ from sqlalchemy.orm import Session
 from uuid import uuid4
 from typing import List
 from datetime import datetime, timedelta, UTC
+
 from scheduler.policies import CATEGORY_RETENTION_DAYS
 
 from models.category import Category
 from models.product import Product
-from models.user_model import User
 
 from schema.category import (
     CategoryCreate,
     CategoryUpdate,
     CategoryFieldCreate,
-    CategoryFieldUpdate
+    CategoryFieldUpdate,
 )
 
 from utils.category_del_inventory import get_category_stock_impact
 
 
-# helper
 def normalize_fields(fields):
     if not fields:
         return []
@@ -35,29 +34,25 @@ def normalize_fields(fields):
         })
 
     return sorted(normalized, key=lambda x: x["order"])
-# =========================================================
-# CREATE CATEGORY
-# =========================================================
+
+
 def create_category(
     db: Session,
-    user_id: str,
+    business_id: str,
     data: CategoryCreate
 ) -> Category:
-
     fields = []
 
     if data.fields:
         for index, field in enumerate(data.fields, start=1):
             field_dict = field.model_dump()
-
             field_dict["id"] = str(uuid4())
             field_dict["order"] = index
-
             fields.append(field_dict)
 
     category = Category(
         id=uuid4(),
-        user_id=user_id,
+        business_id=business_id,
         name=data.name,
         fields=fields
     )
@@ -69,17 +64,13 @@ def create_category(
     return category
 
 
-# =========================================================
-# GET ALL CATEGORIES
-# =========================================================
 def get_categories(
     db: Session,
-    user_id: str
+    business_id: str
 ):
-
     categories = db.query(Category).filter(
-    Category.user_id == user_id,
-    Category.deleted_at.is_(None)
+        Category.business_id == business_id,
+        Category.deleted_at.is_(None)
     ).all()
 
     for category in categories:
@@ -88,41 +79,46 @@ def get_categories(
     return categories
 
 
-# =========================================================
-# GET SINGLE CATEGORY
-# =========================================================
 def get_category(
     db: Session,
-    user_id: str,
+    business_id: str,
     category_id: str
 ):
-
     category = db.query(Category).filter(
         Category.id == category_id,
-        Category.user_id == user_id,
+        Category.business_id == business_id,
         Category.deleted_at.is_(None)
     ).first()
 
-    if category and category.fields:
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found"
+        )
+
+    if category.fields:
         category.fields = normalize_fields(category.fields)
 
     return category
 
 
-# =========================================================
-# UPDATE CATEGORY
-# =========================================================
 def update_category(
     db: Session,
-    user_id: str,
+    business_id: str,
     category_id: str,
     data: CategoryUpdate
 ):
-
-    category = get_category(db, user_id, category_id)
+    category = db.query(Category).filter(
+        Category.id == category_id,
+        Category.business_id == business_id,
+        Category.deleted_at.is_(None)
+    ).first()
 
     if not category:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found"
+        )
 
     update_data = data.model_dump(exclude_unset=True)
 
@@ -135,28 +131,72 @@ def update_category(
     return category
 
 
-# =========================================================
-# ADD CATEGORY FIELD
-# =========================================================
+def delete_category(
+    db: Session,
+    category_id: str,
+    business_id: str
+):
+    category = db.query(Category).filter(
+        Category.id == category_id,
+        Category.business_id == business_id,
+        Category.deleted_at.is_(None)
+    ).first()
+
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found"
+        )
+
+    active_product_exists = db.query(Product.id).filter(
+        Product.category_id == category_id,
+        Product.business_id == business_id,
+        Product.deleted_at.is_(None)
+    ).first()
+
+    if active_product_exists:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete category. Delete all products in this category first."
+        )
+
+    try:
+        category.deleted_at = datetime.now(UTC)
+
+        db.commit()
+        db.refresh(category)
+
+        return True
+
+    except Exception:
+        db.rollback()
+        raise
+
+
 def add_category_field(
     db: Session,
-    user_id: str,
+    business_id: str,
     category_id: str,
     data: CategoryFieldCreate
 ):
-
-    category = get_category(db, user_id, category_id)
+    category = db.query(Category).filter(
+        Category.id == category_id,
+        Category.business_id == business_id,
+        Category.deleted_at.is_(None)
+    ).first()
 
     if not category:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found"
+        )
 
-    if not category.fields:
-        category.fields = []
+    fields = category.fields or []
 
-    # Prevent duplicate key
-    if any(f["key"] == data.key for f in category.fields):
-        raise ValueError(
-            f"Field with key '{data.key}' already exists"
+    if any(f["key"] == data.key for f in fields):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Field with key '{data.key}' already exists"
         )
 
     new_field = {
@@ -164,11 +204,14 @@ def add_category_field(
         "key": data.key,
         "type": data.type,
         "required": getattr(data, "required", False),
-        "order": len(category.fields) + 1,
+        "order": len(fields) + 1,
         "meta": getattr(data, "meta", {})
     }
 
-    category.fields.append(new_field)
+    category.fields = [
+        *fields,
+        new_field
+    ]
 
     db.commit()
     db.refresh(category)
@@ -176,21 +219,24 @@ def add_category_field(
     return new_field
 
 
-# =========================================================
-# UPDATE CATEGORY FIELD
-# =========================================================
 def update_category_field(
     db: Session,
-    user_id: str,
+    business_id: str,
     category_id: str,
     field_id: str,
     data: CategoryFieldUpdate
 ):
-
-    category = get_category(db, user_id, category_id)
+    category = db.query(Category).filter(
+        Category.id == category_id,
+        Category.business_id == business_id,
+        Category.deleted_at.is_(None)
+    ).first()
 
     if not category or not category.fields:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Field or category not found"
+        )
 
     updates = data.model_dump(exclude_unset=True)
 
@@ -198,20 +244,17 @@ def update_category_field(
     updated_field = None
 
     for field in category.fields:
-
         if field["id"] == field_id:
-
             updates.pop("id", None)
 
-            # Prevent duplicate key
             if "key" in updates:
                 if any(
-                    f["key"] == updates["key"]
-                    and f["id"] != field_id
+                    f["key"] == updates["key"] and f["id"] != field_id
                     for f in category.fields
                 ):
-                    raise ValueError(
-                        f"Field with key '{updates['key']}' already exists"
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Field with key '{updates['key']}' already exists"
                     )
 
             updated_field = {
@@ -225,7 +268,10 @@ def update_category_field(
             new_fields.append(field)
 
     if not updated_field:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Field or category not found"
+        )
 
     category.fields = new_fields
 
@@ -235,27 +281,41 @@ def update_category_field(
     return updated_field
 
 
-# =========================================================
-# DELETE CATEGORY FIELD
-# =========================================================
 def delete_category_field(
     db: Session,
-    user_id: str,
+    business_id: str,
     category_id: str,
     field_id: str
 ):
-
-    category = get_category(db, user_id, category_id)
+    category = db.query(Category).filter(
+        Category.id == category_id,
+        Category.business_id == business_id,
+        Category.deleted_at.is_(None)
+    ).first()
 
     if not category or not category.fields:
-        return False
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Field or category not found"
+        )
+
+    field_exists = any(
+        field["id"] == field_id
+        for field in category.fields
+    )
+
+    if not field_exists:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Field or category not found"
+        )
 
     new_fields = [
-        field for field in category.fields
+        field
+        for field in category.fields
         if field["id"] != field_id
     ]
 
-    # Normalize order
     for index, field in enumerate(new_fields, start=1):
         field["order"] = index
 
@@ -267,43 +327,44 @@ def delete_category_field(
     return True
 
 
-# =========================================================
-# REORDER CATEGORY FIELDS
-# =========================================================
 def reorder_category_fields(
     db: Session,
-    user_id: str,
+    business_id: str,
     category_id: str,
     ordered_field_ids: List[str]
 ):
-
-    category = get_category(db, user_id, category_id)
+    category = db.query(Category).filter(
+        Category.id == category_id,
+        Category.business_id == business_id,
+        Category.deleted_at.is_(None)
+    ).first()
 
     if not category or not category.fields:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found"
+        )
 
     existing_fields = {
         field["id"]: field
         for field in category.fields
     }
 
-    # Validate IDs
     if set(ordered_field_ids) != set(existing_fields.keys()):
-        raise ValueError("Field IDs mismatch")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Field IDs mismatch"
+        )
 
     new_fields = []
 
-    # Assign fresh order
     for index, field_id in enumerate(ordered_field_ids, start=1):
-
         field = existing_fields[field_id]
 
-        updated_field = {
+        new_fields.append({
             **field,
             "order": index
-        }
-
-        new_fields.append(updated_field)
+        })
 
     category.fields = new_fields
 
@@ -313,56 +374,16 @@ def reorder_category_fields(
     return category.fields
 
 
-# =========================================================
-# DELETE CATEGORY
-# =========================================================
-def delete_category(
-    db: Session,
-    category_id: str,
-    user_id: str
-):
-
-    category = db.query(Category).filter(
-        Category.id == category_id,
-        Category.user_id == user_id,
-        Category.deleted_at.is_(None)
-    ).first()
-
-    if not category:
-        return None
-
-    active_product_exists = db.query(Product.id).filter(
-        Product.category_id == category_id,
-        Product.user_id == user_id,
-        Product.deleted_at.is_(None)
-    ).first()
-
-    if active_product_exists:
-        raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="Cannot delete category. Delete all products in this category first."
-    )
-    try:
-        category.deleted_at = datetime.now(UTC)
-
-        db.commit()
-        db.refresh(category)
-
-        return True
-
-    except Exception:
-        db.rollback()
-        raise
-
-# ------------------category cleanup------------------
 def cleanup_deleted_categories(db: Session):
-    cutoff = datetime.now(UTC) - timedelta(days=CATEGORY_RETENTION_DAYS)
+    cutoff = datetime.now(UTC) - timedelta(
+        days=CATEGORY_RETENTION_DAYS
+    )
 
     (
         db.query(Category)
         .filter(
             Category.deleted_at.is_not(None),
-            Category.deleted_at < cutoff,
+            Category.deleted_at < cutoff
         )
         .delete(synchronize_session=False)
     )

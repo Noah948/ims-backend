@@ -1,0 +1,44 @@
+# Scheduler Architecture
+
+This project uses **APScheduler** to run periodic background jobs.
+
+## Scheduler Types
+
+APScheduler provides two scheduler types relevant to this project:
+
+* **`BlockingScheduler`** — runs as a standalone scheduler process and blocks the current process. Useful when the scheduler is managed separately from the application server.
+* **`BackgroundScheduler`** — runs the scheduler in the background without blocking the application. Suitable when the scheduler runs alongside the application server.
+
+## Current Architecture
+
+Currently, the project uses **`BackgroundScheduler`**.
+
+```text
+FastAPI Server
+│
+├── API Requests
+│
+└── BackgroundScheduler
+      ├── Cleanup Jobs
+      └── Subscription Jobs
+```
+
+The scheduler starts and stops with the FastAPI application.
+
+The previous **`BlockingScheduler`** setup is kept in `scheduler/main.py` as a standalone option.
+
+## Important: Multiple Server Instances
+
+The current setup assumes **one FastAPI server instance**.
+
+If the application is later deployed with **multiple server instances/workers**, do not simply keep the current setup, because each instance could start its own scheduler and execute the same jobs multiple times.
+
+At that point, move the scheduler to a **separate scheduler process/service** using the `BlockingScheduler` setup.
+
+The required changes are already indicated in:
+
+* `scheduler/scheduler.py`
+* `scheduler/main.py`
+* `main.py`
+
+Follow the comments in those files when migrating the architecture.
