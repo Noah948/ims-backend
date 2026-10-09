@@ -27,6 +27,7 @@ from schema.user import (
 from services.user_service import (
     register_user,
     verify_email_token,
+    get_registration_status,
     update_user,
 )
 
@@ -84,6 +85,15 @@ def verify_email(
     token: str,
 ):
     return verify_email_token(token)
+
+
+@router.get(
+    "/verification-status",
+)
+def verification_status(
+    registration_id: str,
+):
+    return get_registration_status(registration_id)
 
 
 # =====================================================

@@ -146,8 +146,11 @@ def register_user(
 
         raise
 
+    # The signing-up client keeps registration_id to poll
+    # verification status and finish onboarding.
     return {
         "message": "Verification email sent successfully",
+        "registration_id": registration_id,
     }
 
 
@@ -267,6 +270,45 @@ def verify_email_token(token: str) -> dict:
     return {
         "message": "Email verified successfully",
         "registration_id": registration_id,
+    }
+
+
+# =====================================================
+# Registration Verification Status
+# =====================================================
+
+def get_registration_status(
+    registration_id: str,
+) -> dict:
+    """
+    Report whether the email for a pending registration
+    has been verified.
+    """
+
+    raw_registration = redis_client.get(
+        _registration_key(registration_id)
+    )
+
+    if not raw_registration:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Registration expired or does not exist",
+        )
+
+    try:
+
+        registration = json.loads(raw_registration)
+
+    except (TypeError, json.JSONDecodeError):
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Invalid registration data",
+        )
+
+    return {
+        "verified": bool(registration.get("verified")),
     }
 
 
