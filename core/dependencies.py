@@ -1,5 +1,8 @@
+from dataclasses import dataclass
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
 from core.database import get_db
@@ -8,19 +11,25 @@ from models.user_model import User
 from models.business import Business
 from models.business_member import BusinessMember
 from models.enums import MemberRole
-from models.business import Business
-from models.business_member import BusinessMember
 from services.subscription_service import should_block_access
 
 security = HTTPBearer()
 
 
-def get_current_user(
+@dataclass
+class AuthContext:
+    user: User
+    membership: BusinessMember
+    business: Business
+
+
+def get_auth_context(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
-):
-    token = credentials.credentials
-    payload = decode_access_token(token)
+) -> AuthContext:
+    # One round trip for user + membership + business. FastAPI caches this
+    # per request, so every dependency below shares the same result.
+    payload = decode_access_token(credentials.credentials)
 
     if not payload or "sub" not in payload:
         raise HTTPException(
@@ -28,31 +37,29 @@ def get_current_user(
             detail="Invalid or expired token",
         )
 
-    user = db.query(User).filter(
-        User.id == payload["sub"],
-        User.deleted_at.is_(None)
+    row = db.execute(
+        select(User, BusinessMember, Business)
+        .outerjoin(BusinessMember, BusinessMember.user_id == User.id)
+        .outerjoin(Business, and_(
+            Business.id == BusinessMember.business_id,
+            Business.deleted_at.is_(None),
+        ))
+        .where(User.id == payload["sub"], User.deleted_at.is_(None))
     ).first()
 
-    if not user:
+    if not row:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
 
-    membership = db.query(BusinessMember).filter(
-        BusinessMember.user_id == user.id
-    ).first()
+    user, membership, business = row
 
     if not membership:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No business associated with this account",
         )
-
-    business = db.query(Business).filter(
-        Business.id == membership.business_id,
-        Business.deleted_at.is_(None),
-    ).first()
 
     if not business:
         raise HTTPException(
@@ -66,57 +73,27 @@ def get_current_user(
             detail="Subscription expired. Please renew your subscription to continue.",
         )
 
-    return user
+    return AuthContext(user, membership, business)
 
 
-def get_current_business(
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> Business:
-    membership = (
-        db.query(BusinessMember)
-        .filter(BusinessMember.user_id == user.id)
-        .first()
-    )
+def get_current_user(ctx: AuthContext = Depends(get_auth_context)) -> User:
+    return ctx.user
 
-    if not membership:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No business found for current user"
-        )
 
-    business = db.query(Business).filter(
-        Business.id == membership.business_id,
-        Business.deleted_at.is_(None)
-    ).first()
+def get_current_business(ctx: AuthContext = Depends(get_auth_context)) -> Business:
+    return ctx.business
 
-    if not business:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Business not found"
-        )
 
-    return business
+def get_current_membership(ctx: AuthContext = Depends(get_auth_context)) -> BusinessMember:
+    return ctx.membership
 
 
 def require_role(required_role: MemberRole):
-    def checker(
-        user: User = Depends(get_current_user),
-        db: Session = Depends(get_db),
-    ):
-        membership = (
-            db.query(BusinessMember)
-            .filter(
-                BusinessMember.user_id == user.id,
-                BusinessMember.role == required_role
-            )
-            .first()
-        )
-
-        if not membership:
+    def checker(ctx: AuthContext = Depends(get_auth_context)):
+        if ctx.membership.role != required_role:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions"
             )
-        return user
+        return ctx.user
     return checker
