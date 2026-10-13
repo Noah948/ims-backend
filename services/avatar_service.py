@@ -32,12 +32,10 @@ def _not_configured() -> HTTPException:
 
 def _supabase_url() -> str:
     """
-    Explicit SUPABASE_URL, otherwise the project ref from DATABASE_URL:
+    Supabase project URL, built from the project ref in DATABASE_URL:
     pooler user "postgres.<ref>" or direct host "db.<ref>.supabase.co".
+    DATABASE_URL itself is a postgresql:// string, never an HTTP URL.
     """
-
-    if settings.DATABASE_URL:
-        return settings.DATABASE_URL.rstrip("/")
 
     parts = urlsplit(settings.DATABASE_URL)
     username = parts.username or ""
@@ -105,6 +103,22 @@ async def _storage_request(
 
     url = f"{_supabase_url()}/storage/v1/object/{settings.SUPABASE_AVATAR_BUCKET}/{path}".rstrip("/")
     headers = {**_headers(), **kwargs.pop("headers", {})}
+
+    try:
+        return await _send(method, url, headers, timeout, **kwargs)
+    except httpx.HTTPError as exc:
+        # Callers turn this into a generic 502; keep the real reason in the logs.
+        print(f"Avatar storage {method} failed: {exc!r}")
+        raise
+
+
+async def _send(
+    method: str,
+    url: str,
+    headers: dict,
+    timeout: float,
+    **kwargs,
+) -> httpx.Response:
 
     async with httpx.AsyncClient(timeout=timeout) as client:
 
