@@ -36,8 +36,8 @@ def _supabase_url() -> str:
     pooler user "postgres.<ref>" or direct host "db.<ref>.supabase.co".
     """
 
-    if settings.SUPABASE_URL:
-        return settings.SUPABASE_URL.rstrip("/")
+    if settings.DATABASE_URL:
+        return settings.DATABASE_URL.rstrip("/")
 
     parts = urlsplit(settings.DATABASE_URL)
     username = parts.username or ""
