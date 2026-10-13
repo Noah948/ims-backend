@@ -98,5 +98,4 @@ class Payment(Base):
 
     business: Mapped["Business"] = relationship(
         back_populates="payments",
-        lazy="selectin",
     )

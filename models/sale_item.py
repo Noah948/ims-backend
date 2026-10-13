@@ -98,10 +98,8 @@ class SaleItem(Base):
 
     sale: Mapped["Sale"] = relationship(
         back_populates="items",
-        lazy="selectin",
     )
 
     product: Mapped["Product"] = relationship(
         back_populates="sale_items",
-        lazy="selectin",
     )

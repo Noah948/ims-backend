@@ -130,47 +130,39 @@ class Business(Base):
     members: Mapped[List["BusinessMember"]] = relationship(
         back_populates="business",
         cascade="all, delete-orphan",
-        lazy="selectin",
     )
 
     categories: Mapped[List["Category"]] = relationship(
         back_populates="business",
         cascade="all, delete-orphan",
-        lazy="selectin",
     )
 
     products: Mapped[List["Product"]] = relationship(
         back_populates="business",
         cascade="all, delete-orphan",
-        lazy="selectin",
     )
 
     sales: Mapped[List["Sale"]] = relationship(
         back_populates="business",
         cascade="all, delete-orphan",
-        lazy="selectin",
     )
 
     expenses: Mapped[List["Expense"]] = relationship(
         back_populates="business",
         cascade="all, delete-orphan",
-        lazy="selectin",
     )
 
     payments: Mapped[List["Payment"]] = relationship(
         back_populates="business",
         cascade="all, delete-orphan",
-        lazy="selectin",
     )
 
     jobs: Mapped[List["Job"]] = relationship(
         back_populates="business",
         cascade="all, delete-orphan",
-        lazy="selectin",
     )
 
     audit_logs: Mapped[List["AuditLog"]] = relationship(
         back_populates="business",
         cascade="all, delete-orphan",
-        lazy="selectin",
     )

@@ -106,11 +106,9 @@ class AuditLog(Base):
     business = relationship(
         "Business",
         back_populates="audit_logs",
-        lazy="selectin",
     )
 
     user = relationship(
         "User",
         back_populates="audit_logs",
-        lazy="selectin",
     )

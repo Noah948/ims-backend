@@ -102,38 +102,32 @@ class User(Base):
     # Businesses owned by this user
     owned_businesses: Mapped[List["Business"]] = relationship(
         back_populates="owner",
-        lazy="selectin",
     )
 
     # Businesses where this user is a member
     business_memberships: Mapped[List["BusinessMember"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
-        lazy="selectin",
         foreign_keys="BusinessMember.user_id",
     )
 
     # Members invited by this user
     invited_members: Mapped[List["BusinessMember"]] = relationship(
         back_populates="invited_by_user",
-        lazy="selectin",
         foreign_keys="BusinessMember.invited_by",
     )
 
     # Sales created by this user
     sales: Mapped[List["Sale"]] = relationship(
         back_populates="created_by_user",
-        lazy="selectin",
     )
 
     # Jobs created by this user
     jobs: Mapped[List["Job"]] = relationship(
         back_populates="created_by_user",
-        lazy="selectin",
     )
 
     # Audit logs performed by this user
     audit_logs: Mapped[List["AuditLog"]] = relationship(
         back_populates="user",
-        lazy="selectin",
     )

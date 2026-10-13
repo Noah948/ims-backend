@@ -87,5 +87,4 @@ class Expense(Base):
 
     business: Mapped["Business"] = relationship(
         back_populates="expenses",
-        lazy="selectin",
     )

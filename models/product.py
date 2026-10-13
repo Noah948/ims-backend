@@ -97,15 +97,12 @@ class Product(Base):
 
     business: Mapped["Business"] = relationship(
         back_populates="products",
-        lazy="selectin",
     )
 
     category: Mapped["Category"] = relationship(
         back_populates="products",
-        lazy="selectin",
     )
 
     sale_items: Mapped[List["SaleItem"]] = relationship(
         back_populates="product",
-        lazy="selectin",
     )

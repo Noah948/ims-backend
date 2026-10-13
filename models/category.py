@@ -66,12 +66,10 @@ class Category(Base):
 
     business: Mapped["Business"] = relationship(
         back_populates="categories",
-        lazy="selectin",
     )
 
     products: Mapped[List["Product"]] = relationship(
         back_populates="category",
-        lazy="selectin",
         cascade="all, delete-orphan",
     )
 

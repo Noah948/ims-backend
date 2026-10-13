@@ -95,10 +95,8 @@ class Job(Base):
 
     business: Mapped["Business"] = relationship(
         back_populates="jobs",
-        lazy="selectin",
     )
 
     created_by_user: Mapped["User"] = relationship(
         back_populates="jobs",
-        lazy="selectin",
     )

@@ -84,12 +84,10 @@ class Sale(Base):
 
     business: Mapped["Business"] = relationship(
         back_populates="sales",
-        lazy="selectin",
     )
 
     created_by_user: Mapped["User"] = relationship(
         back_populates="sales",
-        lazy="selectin",
     )
 
     items: Mapped[List["SaleItem"]] = relationship(
