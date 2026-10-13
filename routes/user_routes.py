@@ -1,12 +1,16 @@
 
 import os
+from uuid import UUID
 
 from fastapi import (
     APIRouter,
     Depends,
+    File,
     status,
     HTTPException,
+    UploadFile,
 )
+from fastapi.responses import Response
 # from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -29,6 +33,12 @@ from services.user_service import (
     verify_email_token,
     get_registration_status,
     update_user,
+)
+
+from services.avatar_service import (
+    upload_avatar,
+    get_avatar_image,
+    delete_avatar,
 )
 
 from services.deletion_service import (
@@ -123,6 +133,77 @@ def update_me(
         db=db,
         user=current_user,
         data=data,
+    )
+
+
+# =====================================================
+# AVATAR
+# =====================================================
+
+@router.get("/me/avatar")
+def get_avatar(
+    current_user: User = Depends(get_current_user),
+):
+    return {
+        "avatar": current_user.avatar
+    }
+
+
+# POST creates, PUT replaces; both upload a new file and
+# remove the previous one, so they behave identically.
+@router.post(
+    "/me/avatar",
+    response_model=UserResponse,
+)
+@router.put(
+    "/me/avatar",
+    response_model=UserResponse,
+)
+async def upload_avatar_endpoint(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await upload_avatar(
+        db=db,
+        user=current_user,
+        file=file,
+    )
+
+
+@router.delete(
+    "/me/avatar",
+    response_model=UserResponse,
+)
+async def delete_avatar_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await delete_avatar(
+        db=db,
+        user=current_user,
+    )
+
+
+# Public on purpose: <img> tags can't send the Bearer token.
+# Images are proxied so browsers never need to reach Supabase.
+@router.get("/{user_id}/avatar")
+async def avatar_image(
+    user_id: UUID,
+    db: Session = Depends(get_db),
+):
+    content, content_type = await get_avatar_image(
+        db=db,
+        user_id=user_id,
+    )
+
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

@@ -23,7 +23,6 @@ class UserLogin(BaseModel):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(None, min_length=2)
     contact_number: Optional[str] = Field(None, pattern=r"^[0-9]{10}$")
-    avatar: Optional[str] = None
 
 
 class UserResponse(BaseModel):

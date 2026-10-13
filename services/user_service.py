@@ -434,10 +434,6 @@ def update_user(
 
         user.contact_number = data.contact_number
 
-    if data.avatar is not None:
-
-        user.avatar = data.avatar
-
     user.updated_at = datetime.utcnow()
 
     db.commit()

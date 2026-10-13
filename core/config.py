@@ -23,6 +23,12 @@ class Settings(BaseSettings):
     UPSTASH_REDIS_REST_URL: str = ""
     UPSTASH_REDIS_REST_TOKEN: str = ""
 
+    # Supabase Storage (profile pictures).
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    SUPABASE_AVATAR_BUCKET: str = "avatar"
+    # Local dev only: resolve *.supabase.co via DNS-over-HTTPS for ISPs that block it.
+    SUPABASE_DNS_OVER_HTTPS: bool = False
+
     # Exposes the unauthenticated POST /dev/seed mock-data endpoint. Never enable in prod.
     ENABLE_SEED: bool = False
 

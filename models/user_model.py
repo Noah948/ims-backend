@@ -61,6 +61,9 @@ class User(Base):
 
     avatar: Mapped[Optional[str]] = mapped_column(Text)
 
+    # Object key of the avatar inside the Supabase "avatar" bucket
+    avatar_path: Mapped[Optional[str]] = mapped_column(Text)
+
 
     is_active: Mapped[bool] = mapped_column(
         Boolean,
