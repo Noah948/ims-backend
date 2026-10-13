@@ -51,4 +51,4 @@ class VerifyPasswordChangeOTP(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     change_token: str
-    new_password: str
+    new_password: str = Field(..., min_length=8)

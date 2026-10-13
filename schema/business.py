@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import datetime
 from typing import Optional
-from models.enums import SubscriptionPlan, SubscriptionStatus
+from models.enums import MemberRole, SubscriptionPlan, SubscriptionStatus
 
 
 class BusinessBase(BaseModel):
@@ -36,3 +36,8 @@ class BusinessResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Business of the current user, plus their role in it
+class BusinessMeResponse(BusinessResponse):
+    role: MemberRole
