@@ -1,5 +1,8 @@
-from fastapi import FastAPI
+import traceback
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from core.database import Base, engine
 from core.config import settings
@@ -53,6 +56,21 @@ def shutdown():
     if scheduler.running:
         scheduler.shutdown()
         print("Scheduler stopped")
+
+
+# Registered before CORS so it runs inside it: without this, an unhandled
+# exception becomes a 500 with no CORS headers and the browser only sees
+# "Network Error".
+@app.middleware("http")
+async def catch_unhandled_errors(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as exc:
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Internal server error ({type(exc).__name__})"},
+        )
 
 
 app.add_middleware(
