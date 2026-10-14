@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from core.database import get_db
-from core.dependencies import get_current_business
+from core.dependencies import get_current_business, require_permission
+from core.permissions import Permission
 
 from models.business import Business
 
@@ -41,7 +42,8 @@ router = APIRouter(
 @router.post(
     "/",
     response_model=CategoryResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_permission(Permission.CREATE_CATEGORIES))],
 )
 def create_category_endpoint(
     data: CategoryCreate,
@@ -87,7 +89,8 @@ def retrieve_category(
 
 @router.patch(
     "/{category_id}",
-    response_model=CategoryResponse
+    response_model=CategoryResponse,
+    dependencies=[Depends(require_permission(Permission.EDIT_CATEGORIES))],
 )
 def update_category_endpoint(
     category_id: UUID,
@@ -105,7 +108,8 @@ def update_category_endpoint(
 
 @router.delete(
     "/{category_id}",
-    status_code=status.HTTP_204_NO_CONTENT
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_permission(Permission.DELETE_CATEGORIES))],
 )
 def delete_category_endpoint(
     category_id: UUID,
@@ -122,7 +126,8 @@ def delete_category_endpoint(
 @router.post(
     "/{category_id}/fields",
     response_model=CategoryFieldResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_permission(Permission.EDIT_CATEGORIES))],
 )
 def add_field_endpoint(
     category_id: UUID,
@@ -140,7 +145,8 @@ def add_field_endpoint(
 
 @router.patch(
     "/{category_id}/fields/reorder",
-    response_model=List[CategoryFieldResponse]
+    response_model=List[CategoryFieldResponse],
+    dependencies=[Depends(require_permission(Permission.EDIT_CATEGORIES))],
 )
 def reorder_fields_endpoint(
     category_id: UUID,
@@ -158,7 +164,8 @@ def reorder_fields_endpoint(
 
 @router.patch(
     "/{category_id}/fields/{field_id}",
-    response_model=CategoryFieldResponse
+    response_model=CategoryFieldResponse,
+    dependencies=[Depends(require_permission(Permission.EDIT_CATEGORIES))],
 )
 def update_field_endpoint(
     category_id: UUID,
@@ -178,7 +185,8 @@ def update_field_endpoint(
 
 @router.delete(
     "/{category_id}/fields/{field_id}",
-    status_code=status.HTTP_204_NO_CONTENT
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_permission(Permission.EDIT_CATEGORIES))],
 )
 def delete_field_endpoint(
     category_id: UUID,

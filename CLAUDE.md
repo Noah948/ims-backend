@@ -33,7 +33,7 @@ FastAPI + SQLAlchemy 2.0 (sync, `Mapped`/`mapped_column`) + PostgreSQL, multi-te
 - A user belongs to exactly one business via `BusinessMember` (roles: `OWNER`, `OPERATOR` in `models/enums.py`).
 - `get_current_user` decodes the JWT, then also rejects users with no membership, a soft-deleted business, or a blocked subscription (`services/subscription_service.should_block_access`). So every authenticated route is subscription-gated.
 - `get_current_business` is what most routes depend on; scope every query by `business.id`.
-- `require_role(MemberRole.X)` for role-restricted endpoints.
+- Role-based access: permissions and the role → permission matrix live in `core/permissions.py` (`ROLE_PERMISSIONS`). Guard endpoints with `dependencies=[Depends(require_permission(Permission.X))]`; for in-handler checks (e.g. limited vs full data) use `has_permission(role, Permission.X)`. Never compare roles directly in routes/services.
 
 **Automatic audit logging (`utils/audit_listener.py`):** global SQLAlchemy `before_flush`/`after_flush_postexec` listeners on `Session` record CREATE/UPDATE/DELETE diffs into `AuditLog` for any model instance that has an `id` and a resolvable `business_id`. Don't write audit rows manually; just be aware that any flush on a business-scoped model produces audit entries.
 

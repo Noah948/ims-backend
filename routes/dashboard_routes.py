@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from core.database import get_db
-from core.dependencies import get_current_business, get_current_membership
+from core.dependencies import get_current_business, get_current_membership, require_permission
+from core.permissions import Permission, has_permission
 
 from models.business import Business
 from models.business_member import BusinessMember
-from models.enums import MemberRole
 
 from schema.dashboard import DashboardRange, DashboardResponse
 from services.dashboard_service import get_dashboard
@@ -21,6 +21,7 @@ router = APIRouter(
 @router.get(
     "/",
     response_model=DashboardResponse,
+    dependencies=[Depends(require_permission(Permission.VIEW_DASHBOARD))],
 )
 def get_dashboard_endpoint(
     range: DashboardRange = Query("month"),
@@ -32,5 +33,5 @@ def get_dashboard_endpoint(
         db,
         business,
         range,
-        is_owner=membership.role == MemberRole.OWNER,
+        is_owner=has_permission(membership.role, Permission.VIEW_FULL_REPORTS),
     )

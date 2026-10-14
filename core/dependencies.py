@@ -10,7 +10,7 @@ from utils.jwt import decode_access_token
 from models.user_model import User
 from models.business import Business
 from models.business_member import BusinessMember
-from models.enums import MemberRole
+from core.permissions import Permission, has_permission
 from services.subscription_service import should_block_access
 
 security = HTTPBearer()
@@ -88,12 +88,16 @@ def get_current_membership(ctx: AuthContext = Depends(get_auth_context)) -> Busi
     return ctx.membership
 
 
-def require_role(required_role: MemberRole):
-    def checker(ctx: AuthContext = Depends(get_auth_context)):
-        if ctx.membership.role != required_role:
+def require_permission(*permissions: Permission):
+    """Route guard: `dependencies=[Depends(require_permission(Permission.X))]`.
+    All listed permissions are required. Returns the AuthContext, so it can
+    also be used as a regular parameter dependency."""
+    def checker(ctx: AuthContext = Depends(get_auth_context)) -> AuthContext:
+        missing = [p for p in permissions if not has_permission(ctx.membership.role, p)]
+        if missing:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions"
+                detail="You don't have permission to perform this action",
             )
-        return ctx.user
+        return ctx
     return checker

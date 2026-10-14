@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 from uuid import UUID
 from datetime import datetime
 from typing import Optional
 from models.enums import MemberRole, SubscriptionPlan, SubscriptionStatus
+from core.permissions import Permission, ROLE_PERMISSIONS
 
 
 class BusinessBase(BaseModel):
@@ -41,3 +42,9 @@ class BusinessResponse(BaseModel):
 # Business of the current user, plus their role in it
 class BusinessMeResponse(BusinessResponse):
     role: MemberRole
+
+    # Lets the frontend hide actions the user can't perform.
+    @computed_field
+    @property
+    def permissions(self) -> list[Permission]:
+        return sorted(ROLE_PERMISSIONS.get(self.role, ()))

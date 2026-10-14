@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from core.database import get_db
-from core.dependencies import get_current_user, get_current_business
+from core.dependencies import get_current_user, get_current_business, require_permission
+from core.permissions import Permission
 
 from models.user_model import User
 from models.business import Business
@@ -34,6 +35,7 @@ router = APIRouter(
     "/",
     response_model=SaleResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_permission(Permission.RECORD_SALES))],
 )
 def create_sale_endpoint(
     data: SaleCreate,
@@ -51,6 +53,7 @@ def create_sale_endpoint(
 
 @router.post(
     "/items/{sale_item_id}/return",
+    dependencies=[Depends(require_permission(Permission.EDIT_SALES))],
 )
 def return_sale_item_endpoint(
     sale_item_id: UUID,

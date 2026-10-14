@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from core.database import get_db
-from core.dependencies import get_current_business
+from core.dependencies import get_current_business, require_permission
+from core.permissions import Permission
 
 from models.business import Business
 
@@ -23,7 +24,8 @@ router = APIRouter(
 
 @router.get(
     "/",
-    response_model=PaginatedResponse[AuditLogResponse]
+    response_model=PaginatedResponse[AuditLogResponse],
+    dependencies=[Depends(require_permission(Permission.VIEW_AUDIT_LOGS))],
 )
 def list_audit_logs(
     page: int = Query(1, ge=1),

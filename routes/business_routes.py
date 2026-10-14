@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from core.database import get_db
-from core.dependencies import AuthContext, get_auth_context, require_role
-from models.enums import MemberRole
+from core.dependencies import AuthContext, get_auth_context, require_permission
+from core.permissions import Permission
 
 from schema.business import (
     BusinessCreate,
@@ -62,7 +62,7 @@ def get_my_business(
 @router.patch(
     "/me",
     response_model=BusinessMeResponse,
-    dependencies=[Depends(require_role(MemberRole.OWNER))],
+    dependencies=[Depends(require_permission(Permission.UPDATE_BUSINESS_SETTINGS))],
 )
 def update_my_business(
     data: BusinessUpdate,

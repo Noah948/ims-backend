@@ -5,7 +5,8 @@ from uuid import UUID
 from schema.common import PaginatedResponse
 
 from core.database import get_db
-from core.dependencies import get_current_business
+from core.dependencies import get_current_business, require_permission
+from core.permissions import Permission
 
 from models.business import Business
 
@@ -36,7 +37,8 @@ router = APIRouter(
 @router.post(
     "/",
     response_model=ProductResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_permission(Permission.CREATE_PRODUCTS))],
 )
 def create(
     data: ProductCreate,
@@ -86,7 +88,8 @@ def get_one(
 
 @router.put(
     "/{product_id}",
-    response_model=ProductResponse
+    response_model=ProductResponse,
+    dependencies=[Depends(require_permission(Permission.EDIT_PRODUCTS))],
 )
 def update(
     product_id: UUID,
@@ -104,7 +107,8 @@ def update(
 
 @router.delete(
     "/{product_id}",
-    status_code=status.HTTP_204_NO_CONTENT
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_permission(Permission.DELETE_PRODUCTS))],
 )
 def delete(
     product_id: UUID,
@@ -120,7 +124,8 @@ def delete(
 
 @router.post(
     "/{product_id}/add",
-    response_model=ProductResponse
+    response_model=ProductResponse,
+    dependencies=[Depends(require_permission(Permission.EDIT_PRODUCTS))],
 )
 def add_quantity_endpoint(
     product_id: UUID,
@@ -138,7 +143,8 @@ def add_quantity_endpoint(
 
 @router.post(
     "/{product_id}/remove",
-    response_model=ProductResponse
+    response_model=ProductResponse,
+    dependencies=[Depends(require_permission(Permission.EDIT_PRODUCTS))],
 )
 def remove_quantity_endpoint(
     product_id: UUID,

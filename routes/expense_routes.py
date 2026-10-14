@@ -4,7 +4,8 @@ from typing import List
 from uuid import UUID
 
 from core.database import get_db
-from core.dependencies import get_current_business
+from core.dependencies import get_current_business, require_permission
+from core.permissions import Permission
 
 from models.business import Business
 
@@ -35,6 +36,7 @@ router = APIRouter(
     "/",
     response_model=ExpenseResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_permission(Permission.MANAGE_EXPENSES))],
 )
 def create_expense_endpoint(
     data: ExpenseCreate,
@@ -51,6 +53,7 @@ def create_expense_endpoint(
 @router.get(
     "/",
     response_model=List[ExpenseResponse],
+    dependencies=[Depends(require_permission(Permission.MANAGE_EXPENSES))],
 )
 def list_expenses(
     db: Session = Depends(get_db),
@@ -65,6 +68,7 @@ def list_expenses(
 @router.get(
     "/{expense_id}",
     response_model=ExpenseResponse,
+    dependencies=[Depends(require_permission(Permission.MANAGE_EXPENSES))],
 )
 def retrieve_expense(
     expense_id: UUID,
@@ -81,6 +85,7 @@ def retrieve_expense(
 @router.put(
     "/{expense_id}",
     response_model=ExpenseResponse,
+    dependencies=[Depends(require_permission(Permission.MANAGE_EXPENSES))],
 )
 def update_expense_endpoint(
     expense_id: UUID,
@@ -99,6 +104,7 @@ def update_expense_endpoint(
 @router.delete(
     "/{expense_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_permission(Permission.MANAGE_EXPENSES))],
 )
 def delete_expense_endpoint(
     expense_id: UUID,
@@ -117,6 +123,7 @@ def delete_expense_endpoint(
 @router.post(
     "/filter",
     response_model=List[ExpenseResponse],
+    dependencies=[Depends(require_permission(Permission.MANAGE_EXPENSES))],
 )
 def filter_expenses_endpoint(
     filters: ExpenseFilter,
