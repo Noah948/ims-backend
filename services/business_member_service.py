@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from models.business import Business
 from models.business_member import BusinessMember
@@ -33,6 +33,7 @@ def get_business_members(
 ):
     return (
         db.query(BusinessMember)
+        .options(joinedload(BusinessMember.user))
         .filter(
             BusinessMember.business_id == business_id
         )

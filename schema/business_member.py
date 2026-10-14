@@ -19,6 +19,16 @@ class BusinessMemberUpdate(BaseModel):
     role: Optional[MemberRole] = None
 
 
+class MemberUserInfo(BaseModel):
+    full_name: str
+    email: str
+    contact_number: Optional[str] = None
+    avatar: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class BusinessMemberResponse(BaseModel):
     id: UUID
     business_id: UUID
@@ -28,6 +38,7 @@ class BusinessMemberResponse(BaseModel):
     joined_at: datetime
     created_at: datetime
     updated_at: datetime
+    user: Optional[MemberUserInfo] = None
 
     class Config:
         from_attributes = True
